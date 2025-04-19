@@ -24,7 +24,7 @@ class MotorTester : Methods() {
             vertSlide!!.power = if (up) 0.1 else if (down) -0.1 else 0.0
 
             telemetry.addLine("Running")
-            telemetry.addLine("Encoder Position: ${vertSlide!!.currentPosition}"))
+            telemetry.addLine("Encoder Position: ${vertSlide!!.currentPosition}")
             telemetry.update()
         }
     }
