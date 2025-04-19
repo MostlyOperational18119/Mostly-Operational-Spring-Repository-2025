@@ -1,5 +1,9 @@
-package org.firstinspires.ftc.teamcode
+package org.firstinspires.ftc.teamcode.teleop
 
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp
+import org.firstinspires.ftc.teamcode.Methods
+
+@TeleOp(name = "Motor Tester")
 class MotorTester : Methods() {
     override fun runOpMode() {
 
@@ -11,7 +15,7 @@ class MotorTester : Methods() {
             val driverPrevious = gamepad1
             val gunnerCurrent = gamepad2
             val gunnerPrevious = gamepad2
-            
+
             driverCurrent.copy(driverPrevious)
             gamepad1.copy(driverCurrent)
 

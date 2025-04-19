@@ -3,10 +3,11 @@ package org.firstinspires.ftc.teamcode.autonomous
 import com.acmerobotics.roadrunner.Pose2d
 import com.acmerobotics.roadrunner.SequentialAction
 import com.acmerobotics.roadrunner.ftc.runBlocking
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import org.firstinspires.ftc.teamcode.Methods
 import org.firstinspires.ftc.teamcode.roadrunner.MecanumDrive
 
-
+@Autonomous(name = "Test Autonomous")
 class TestAutonomous : Methods() {
     override fun runOpMode() {
         val startPose = Pose2d(0.0, 0.0, 0.0)
