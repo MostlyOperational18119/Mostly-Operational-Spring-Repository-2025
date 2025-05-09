@@ -70,7 +70,6 @@ public final class TuningOpModes {
     private static PinpointView makePinpointView(PinpointLocalizer pl) {
         return new PinpointView() {
             @NonNull
-            @Override
             public DcMotorSimple.Direction getPerpDirection() {
                 switch (pl.initialPerpDirection) {
                     case FORWARD:
@@ -83,7 +82,6 @@ public final class TuningOpModes {
             }
 
             @NonNull
-            @Override
             public DcMotorSimple.Direction getParDirection() {
                 switch (pl.initialParDirection) {
                     case FORWARD:
@@ -183,10 +181,6 @@ public final class TuningOpModes {
                     perpEncs.add(new EncoderRef(0, 1));
                     lazyImu = new OTOSIMU(ol.otos);
 
-                    manager.register(metaForClass(OTOSAngularScalarTuner.class), new OTOSAngularScalarTuner((DriveViewFactory) ol.otos));
-                    manager.register(metaForClass(OTOSLinearScalarTuner.class), new OTOSLinearScalarTuner((DriveViewFactory) ol.otos));
-                    manager.register(metaForClass(OTOSHeadingOffsetTuner.class), new OTOSHeadingOffsetTuner((DriveViewFactory) ol.otos));
-                    manager.register(metaForClass(OTOSPositionOffsetTuner.class), new OTOSPositionOffsetTuner((DriveViewFactory) ol.otos));
                 }  else if (md.localizer instanceof PinpointLocalizer) {
                     PinpointView pv = makePinpointView((PinpointLocalizer) md.localizer);
                     encoderGroups.add(new PinpointEncoderGroup(pv));
@@ -276,11 +270,6 @@ public final class TuningOpModes {
                     parEncs.add(new EncoderRef(0, 0));
                     perpEncs.add(new EncoderRef(0, 1));
                     lazyImu = new OTOSIMU(ol.otos);
-
-                    manager.register(metaForClass(OTOSAngularScalarTuner.class), new OTOSAngularScalarTuner((DriveViewFactory) ol.otos));
-                    manager.register(metaForClass(OTOSLinearScalarTuner.class), new OTOSLinearScalarTuner((DriveViewFactory) ol.otos));
-                    manager.register(metaForClass(OTOSHeadingOffsetTuner.class), new OTOSHeadingOffsetTuner((DriveViewFactory) ol.otos));
-                    manager.register(metaForClass(OTOSPositionOffsetTuner.class), new OTOSPositionOffsetTuner((DriveViewFactory) ol.otos));
                 } else {
                     throw new RuntimeException("unknown localizer: " + td.localizer.getClass().getName());
                 }
