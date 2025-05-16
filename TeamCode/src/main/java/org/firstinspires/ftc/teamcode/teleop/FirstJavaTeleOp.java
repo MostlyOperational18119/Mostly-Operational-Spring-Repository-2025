@@ -1,22 +1,27 @@
 package org.firstinspires.ftc.teamcode.teleop;
 
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.LLStatus;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
+import java.util.Arrays;
 import java.util.Locale;
 
 @TeleOp(name = "First Java TeleOp")
 public class FirstJavaTeleOp extends LinearOpMode {
-
     @Override
     public void runOpMode() throws InterruptedException {
         DcMotor motorFL = hardwareMap.dcMotor.get("motorFL");
         DcMotor motorFR = hardwareMap.dcMotor.get("motorFR");
         DcMotor motorBL = hardwareMap.dcMotor.get("motorBL");
         DcMotor motorBR = hardwareMap.dcMotor.get("motorBR");
+
+        Limelight3A limelight = hardwareMap.get(Limelight3A.class, "limelight");
 
         motorFL.setDirection(DcMotorSimple.Direction.REVERSE);
         motorBL.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -40,6 +45,8 @@ public class FirstJavaTeleOp extends LinearOpMode {
 
         waitForStart();
 
+        limelight.start();
+
         while (opModeIsActive()) {
             driverCurrent.copy(driverPrevious);
             gamepad1.copy(driverCurrent);
@@ -54,6 +61,15 @@ public class FirstJavaTeleOp extends LinearOpMode {
             gunnerRightY = gamepad2.right_stick_y;
             gunnerLeftX = gamepad2.left_stick_x;
 
+            LLResult result = limelight.getLatestResult();
+            LLStatus status = limelight.getStatus();
+            double[] out = new double[] {};
+            if (result != null) {
+                out = result.getPythonOutput();
+            } else {
+                telemetry.addLine("Warning: LimeLight output is null");
+            }
+
             motorFL.setPower((driverLeftY + driverLeftX + driverRightX) / speedDiv);
             motorFR.setPower((driverLeftY - driverLeftX - driverRightX) / speedDiv);
             motorBL.setPower((driverLeftY - driverLeftX + driverRightX) / speedDiv);
@@ -66,6 +82,8 @@ public class FirstJavaTeleOp extends LinearOpMode {
             telemetry.addLine(String.format(Locale.ENGLISH, "Motor BL: %f", motorBL.getPower()));
             telemetry.addLine(String.format(Locale.ENGLISH, "Motor BR: %f", motorBR.getPower()));
             telemetry.addLine(String.format(Locale.ENGLISH, "Right X: %f", gamepad1.right_stick_x));
+            telemetry.addLine(String.format(Locale.ENGLISH, "Limelight Output: %s", Arrays.toString(out)));
+            telemetry.addLine(String.format(Locale.ENGLISH, "Limelight Status: %s", status.toString()));
             telemetry.update();
         }
     }
