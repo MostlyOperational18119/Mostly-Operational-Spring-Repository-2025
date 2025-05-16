@@ -27,9 +27,10 @@ public class ServiceOpMode extends OpMode {
     private Thread visionServiceThread;
     private PlannerService plannerService;
     private Thread plannerServiceThread;
-    private Telemetry telemetry;
 
-    public ServiceOpMode(Telemetry telemetry, HardwareMap hardwareMap) {
+
+    @Override
+    public void init() {
         this.visionServiceInputQueue = new LinkedBlockingQueue<>();
         this.visionServiceOutputQueue = new LinkedBlockingQueue<>();
         this.driveServiceInputQueue = new LinkedBlockingQueue<>();
@@ -38,12 +39,7 @@ public class ServiceOpMode extends OpMode {
         this.driveService = new DriveService(hardwareMap);
         this.visionService = new VisionService(hardwareMap, visionServiceInputQueue, visionServiceOutputQueue);
         this.plannerService = new PlannerService(visionServiceOutputQueue, driveServiceInputQueue);
-        this.telemetry = telemetry;
-    }
 
-
-    @Override
-    public void init() {
         try {
             driveServiceThread = new Thread(driveService);
             visionServiceThread = new Thread(visionService);
