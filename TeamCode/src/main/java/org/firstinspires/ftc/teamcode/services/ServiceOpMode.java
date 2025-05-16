@@ -4,12 +4,13 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.services.service.DriveService;
-import org.firstinspires.ftc.teamcode.services.Drive.DriveServiceInput;
-import org.firstinspires.ftc.teamcode.services.Drive.DriveServiceOutput;
-import org.firstinspires.ftc.teamcode.services.service.PlannerService;
-import org.firstinspires.ftc.teamcode.services.service.VisionService;
-import org.firstinspires.ftc.teamcode.services.communication.VisionServiceOutput;
+import org.firstinspires.ftc.teamcode.services.Communication.HeartbeatInput;
+import org.firstinspires.ftc.teamcode.services.Communication.HeartbeatOutput;
+import org.firstinspires.ftc.teamcode.services.Service.DriveService;
+import org.firstinspires.ftc.teamcode.services.Communication.DriveServiceInput;
+import org.firstinspires.ftc.teamcode.services.Service.PlannerService;
+import org.firstinspires.ftc.teamcode.services.Service.VisionService;
+import org.firstinspires.ftc.teamcode.services.Communication.VisionServiceOutput;
 
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -17,7 +18,7 @@ public class ServiceOpMode extends OpMode {
     private LinkedBlockingQueue<HeartbeatInput> visionServiceInputQueue;
     private LinkedBlockingQueue<VisionServiceOutput> visionServiceOutputQueue;
     private LinkedBlockingQueue<DriveServiceInput> driveServiceInputQueue;
-    private LinkedBlockingQueue<DriveServiceOutput> driveServiceOutputQueue;
+    private LinkedBlockingQueue<HeartbeatOutput> driveServiceOutputQueue;
 
 
     private DriveService driveService;

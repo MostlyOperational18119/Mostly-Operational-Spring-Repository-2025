@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.services.service;
+package org.firstinspires.ftc.teamcode.services.Service;
 
 
 import androidx.annotation.NonNull;
@@ -13,8 +13,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
-import org.firstinspires.ftc.teamcode.services.HeartbeatInput;
-import org.firstinspires.ftc.teamcode.services.communication.VisionServiceOutput;
+import org.firstinspires.ftc.teamcode.services.Communication.HeartbeatInput;
+import org.firstinspires.ftc.teamcode.services.Communication.VisionServiceOutput;
 
 import java.util.concurrent.LinkedBlockingQueue;
 

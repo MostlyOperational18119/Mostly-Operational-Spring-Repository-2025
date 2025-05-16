@@ -1,7 +1,7 @@
-package org.firstinspires.ftc.teamcode.services.service;
+package org.firstinspires.ftc.teamcode.services.Service;
 
-import org.firstinspires.ftc.teamcode.services.Drive.DriveServiceInput;
-import org.firstinspires.ftc.teamcode.services.communication.VisionServiceOutput;
+import org.firstinspires.ftc.teamcode.services.Communication.DriveServiceInput;
+import org.firstinspires.ftc.teamcode.services.Communication.VisionServiceOutput;
 
 import java.util.concurrent.LinkedBlockingQueue;
 
