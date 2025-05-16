@@ -4,6 +4,11 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.teamcode.services.Communication.DriveServiceInput;
+
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+
 public class DriveService implements Runnable {
     DcMotor motorFL;
     DcMotor motorFR;
@@ -11,13 +16,28 @@ public class DriveService implements Runnable {
     DcMotor motorBR;
     HardwareMap hardwareMap;
 
-    public DriveService(HardwareMap hardwareMap) {
+    final private LinkedBlockingQueue<DriveServiceInput> inputQueue;
+
+    public DriveService(HardwareMap hardwareMap, LinkedBlockingQueue<DriveServiceInput> inputQueue) {
         this.hardwareMap = hardwareMap;
+        this.inputQueue = inputQueue;
     }
 
     @Override
     public void run() {
+        try {
+            while (true) {
+                DriveServiceInput input = inputQueue.poll(5, TimeUnit.SECONDS);
+                if (input.mode == DriveServiceInput.DriveServiceInputMode.MANUAL) {
+                    motorFL.setPower(input.flSpeed);
+                    motorFR.setPower(input.frSpeed);
+                    motorBL.setPower(input.blSpeed);
+                    motorBR.setPower(input.brSpeed);
+                }
+            }
+        } catch (InterruptedException e) {
 
+        }
     }
 
     public void setup() {

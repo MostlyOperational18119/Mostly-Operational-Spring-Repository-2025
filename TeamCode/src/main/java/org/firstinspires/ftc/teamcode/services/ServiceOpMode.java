@@ -36,7 +36,7 @@ public class ServiceOpMode extends OpMode {
         this.driveServiceInputQueue = new LinkedBlockingQueue<>();
         this.driveServiceOutputQueue = new LinkedBlockingQueue<>();
 
-        this.driveService = new DriveService(hardwareMap);
+        this.driveService = new DriveService(hardwareMap, driveServiceInputQueue);
         this.visionService = new VisionService(hardwareMap, visionServiceInputQueue, visionServiceOutputQueue);
         this.plannerService = new PlannerService(visionServiceOutputQueue, driveServiceInputQueue);
 
