@@ -27,7 +27,7 @@ class MotorTester extends LinearOpMode {
             gunnerCurrent.copy(gunnerPrevious);
             gamepad2.copy(gunnerCurrent);
 
-            Boolean u = gamepad1.y;
+            Boolean up = gamepad1.y;
             Boolean down = gamepad1.a;
 
             vertSlide.setPower(up ? 0.1 : (down ? -0.1 : 0.0));
