@@ -21,6 +21,14 @@ public class FirstJavaTeleOp extends LinearOpMode {
         DcMotor motorBL = hardwareMap.dcMotor.get("motorBL");
         DcMotor motorBR = hardwareMap.dcMotor.get("motorBR");
 
+        DcMotor verticalSlide = hardwareMap.dcMotor.get("verticalSlide");
+        verticalSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        verticalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        DcMotor horizontalSlide = hardwareMap.dcMotor.get("horizontalSlide");
+        horizontalSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        horizontalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
         Limelight3A limelight = hardwareMap.get(Limelight3A.class, "limelight");
 
         motorFL.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -36,7 +44,9 @@ public class FirstJavaTeleOp extends LinearOpMode {
         float driverRightX = gamepad1.right_stick_x;
 
         float gunnerRightY = gamepad2.right_stick_y;
+        boolean gunnerRightDown = gamepad2.right_stick_button;
         float gunnerLeftX = gamepad2.left_stick_x;
+        boolean gunnerLeftDown = gamepad2.left_stick_button;
 
         double speedDiv = 1.0;
 
@@ -74,6 +84,9 @@ public class FirstJavaTeleOp extends LinearOpMode {
             motorFR.setPower((driverLeftY - driverLeftX - driverRightX) / speedDiv);
             motorBL.setPower((driverLeftY - driverLeftX + driverRightX) / speedDiv);
             motorBR.setPower((driverLeftY + driverLeftX - driverRightX) / speedDiv);
+            verticalSlide.setPower(gunnerRightY);
+            horizontalSlide.setPower(gunnerLeftX);
+
 
             telemetry.addLine("Running");
             telemetry.addLine(String.format(Locale.ENGLISH, "Speed div: %f", speedDiv));

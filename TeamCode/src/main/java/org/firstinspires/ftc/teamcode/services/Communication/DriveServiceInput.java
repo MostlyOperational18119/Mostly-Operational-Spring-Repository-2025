@@ -12,17 +12,21 @@ public class DriveServiceInput {
     public Double frSpeed;
     public Double blSpeed;
     public Double brSpeed;
+    public Double verticalSpeed;
+    public Double horizontalSpeed;
 
     public DriveServiceInput() {
         mode = DriveServiceInputMode.PLAN;
     }
 
-    public DriveServiceInput(Double flSpeed, Double frSpeed, Double blSpeed, Double brSpeed) {
+    public DriveServiceInput(Double flSpeed, Double frSpeed, Double blSpeed, Double brSpeed, Double verticalSpeed, Double horizontalSpeed) {
         mode = DriveServiceInputMode.MANUAL;
 
         this.flSpeed = flSpeed;
         this.frSpeed = frSpeed;
         this.blSpeed = blSpeed;
         this.brSpeed = brSpeed;
+        this.verticalSpeed = verticalSpeed;
+        this.horizontalSpeed = horizontalSpeed;
     }
 }

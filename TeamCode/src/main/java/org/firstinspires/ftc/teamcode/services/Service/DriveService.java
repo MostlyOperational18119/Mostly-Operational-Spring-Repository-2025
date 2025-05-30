@@ -14,6 +14,8 @@ public class DriveService implements Runnable {
     DcMotor motorFR;
     DcMotor motorBL;
     DcMotor motorBR;
+    DcMotor verticalSlide;
+    DcMotor horizontalSlide;
     HardwareMap hardwareMap;
 
     final private LinkedBlockingQueue<DriveServiceInput> inputQueue;
@@ -33,6 +35,8 @@ public class DriveService implements Runnable {
                     motorFR.setPower(input.frSpeed);
                     motorBL.setPower(input.blSpeed);
                     motorBR.setPower(input.brSpeed);
+                    verticalSlide.setPower(input.verticalSpeed);
+                    horizontalSlide.setPower(input.horizontalSpeed);
                 }
             }
         } catch (InterruptedException e) {
@@ -45,6 +49,7 @@ public class DriveService implements Runnable {
         motorFR = hardwareMap.get(DcMotor.class, "motorFR");
         motorBL = hardwareMap.get(DcMotor.class, "motorBL");
         motorBR = hardwareMap.get(DcMotor.class, "motorBR");
+        verticalSlide = hardwareMap.get(DcMotor.class, "verticalSlide");
         motorFL.setDirection(DcMotorSimple.Direction.REVERSE);
         motorBL.setDirection(DcMotorSimple.Direction.REVERSE);
     }
