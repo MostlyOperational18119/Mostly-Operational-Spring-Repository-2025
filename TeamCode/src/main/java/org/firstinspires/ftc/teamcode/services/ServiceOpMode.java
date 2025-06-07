@@ -1,20 +1,19 @@
 package org.firstinspires.ftc.teamcode.services;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
-import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.services.Communication.HeartbeatInput;
 import org.firstinspires.ftc.teamcode.services.Communication.HeartbeatOutput;
 import org.firstinspires.ftc.teamcode.services.Service.DriveService;
 import org.firstinspires.ftc.teamcode.services.Communication.DriveServiceInput;
-import org.firstinspires.ftc.teamcode.services.Service.PlannerService;
+import org.firstinspires.ftc.teamcode.services.Service.Planner.PlannerService;
+import org.firstinspires.ftc.teamcode.services.Service.TeleOpService;
 import org.firstinspires.ftc.teamcode.services.Service.VisionService;
 import org.firstinspires.ftc.teamcode.services.Communication.VisionServiceOutput;
 
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class ServiceOpMode extends OpMode {
+public abstract class ServiceOpMode extends OpMode {
     private LinkedBlockingQueue<HeartbeatInput> visionServiceInputQueue;
     private LinkedBlockingQueue<VisionServiceOutput> visionServiceOutputQueue;
     private LinkedBlockingQueue<DriveServiceInput> driveServiceInputQueue;
@@ -28,9 +27,16 @@ public class ServiceOpMode extends OpMode {
     private PlannerService plannerService;
     private Thread plannerServiceThread;
 
+    abstract boolean isTeleOp();
+    abstract TeleOpService getService();
+    private TeleOpService service;
+    private Thread serviceThread;
+
 
     @Override
     public void init() {
+        Boolean teleop = isTeleOp();
+
         this.visionServiceInputQueue = new LinkedBlockingQueue<>();
         this.visionServiceOutputQueue = new LinkedBlockingQueue<>();
         this.driveServiceInputQueue = new LinkedBlockingQueue<>();
@@ -38,12 +44,16 @@ public class ServiceOpMode extends OpMode {
 
         this.driveService = new DriveService(hardwareMap, driveServiceInputQueue);
         this.visionService = new VisionService(hardwareMap, visionServiceInputQueue, visionServiceOutputQueue);
-        this.plannerService = new PlannerService(visionServiceOutputQueue, driveServiceInputQueue);
+        this.plannerService = new PlannerService(hardwareMap, visionServiceOutputQueue, driveServiceInputQueue);
+
 
         try {
             driveServiceThread = new Thread(driveService);
             visionServiceThread = new Thread(visionService);
             plannerServiceThread = new Thread(plannerService);
+            if (teleop) {
+
+            }
 
             driveServiceThread.start();
             visionServiceThread.start();
@@ -56,7 +66,7 @@ public class ServiceOpMode extends OpMode {
 
     @Override
     public void loop() {
-
+        requestOpModeStop();
     }
 
     @Override

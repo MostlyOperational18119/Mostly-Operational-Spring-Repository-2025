@@ -3,6 +3,7 @@ repositories {
     google() // Needed for androidx
 }
 
+
 dependencies {
     implementation 'org.firstinspires.ftc:Inspection:10.2.0'
     implementation 'org.firstinspires.ftc:Blocks:10.2.0'
@@ -13,5 +14,7 @@ dependencies {
     implementation 'org.firstinspires.ftc:FtcCommon:10.2.0'
     implementation 'org.firstinspires.ftc:Vision:10.2.0'
     implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'org.ejml:ejml-core:0.41'
+    implementation 'org.ejml:ejml-simple:0.44.0'
 }
 

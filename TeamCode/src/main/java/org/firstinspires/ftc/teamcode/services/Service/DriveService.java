@@ -1,5 +1,9 @@
 package org.firstinspires.ftc.teamcode.services.Service;
 
+import com.arcrobotics.ftclib.geometry.Translation2d;
+import com.arcrobotics.ftclib.kinematics.wpilibkinematics.ChassisSpeeds;
+import com.arcrobotics.ftclib.kinematics.wpilibkinematics.MecanumDriveKinematics;
+import com.arcrobotics.ftclib.kinematics.wpilibkinematics.MecanumDriveWheelSpeeds;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -18,6 +22,22 @@ public class DriveService implements Runnable {
     DcMotor horizontalSlide;
     HardwareMap hardwareMap;
 
+    // Constants for FTCLib Kinematics, double check at some point
+    // 23 cm wide 30 cm long
+    final Translation2d motorFLLocation = new Translation2d(-0.115, 0.15);
+    final Translation2d motorFRLocation = new Translation2d(0.115, 0.15);
+    final Translation2d motorBLLocation = new Translation2d(-0.115, -0.15);
+    final Translation2d motorBRLocation = new Translation2d(0.115, -0.15);
+
+    final double MAX_SPEED = 10.0; // m/sec
+
+    MecanumDriveKinematics kinematics = new MecanumDriveKinematics(
+            motorFLLocation,
+            motorFRLocation,
+            motorBLLocation,
+            motorBRLocation
+    );
+
     final private LinkedBlockingQueue<DriveServiceInput> inputQueue;
 
     public DriveService(HardwareMap hardwareMap, LinkedBlockingQueue<DriveServiceInput> inputQueue) {
@@ -35,12 +55,23 @@ public class DriveService implements Runnable {
                     motorFR.setPower(input.frSpeed);
                     motorBL.setPower(input.blSpeed);
                     motorBR.setPower(input.brSpeed);
-                    verticalSlide.setPower(input.verticalSpeed);
-                    horizontalSlide.setPower(input.horizontalSpeed);
+                    verticalSlide.setPower(input.verticalSlideSpeed);
+                    horizontalSlide.setPower(input.horizontalSlideSpeed);
+                } else if (input.mode == DriveServiceInput.DriveServiceInputMode.PLAN) {
+                    ChassisSpeeds speeds = new ChassisSpeeds(input.forwardSpeed, input.sidewaysSpeed, input.rotationSpeed);
+
+                    MecanumDriveWheelSpeeds wheelSpeeds = kinematics.toWheelSpeeds(speeds);
+
+                    wheelSpeeds.normalize(MAX_SPEED);
+
+                    motorFL.setPower(wheelSpeeds.frontLeftMetersPerSecond / MAX_SPEED);
+                    motorFR.setPower(wheelSpeeds.frontLeftMetersPerSecond / MAX_SPEED);
+                    motorBL.setPower(wheelSpeeds.rearLeftMetersPerSecond / MAX_SPEED);
+                    motorBR.setPower(wheelSpeeds.rearRightMetersPerSecond / MAX_SPEED);
                 }
             }
         } catch (InterruptedException e) {
-
+            // If we were interrupted, we should (probably) be exiting
         }
     }
 
