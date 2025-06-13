@@ -21,6 +21,8 @@ public class FirstJavaTeleOp extends LinearOpMode {
         DcMotor motorBL = hardwareMap.dcMotor.get("motorBL");
         DcMotor motorBR = hardwareMap.dcMotor.get("motorBR");
 
+
+
         DcMotor verticalSlide = hardwareMap.dcMotor.get("verticalSlide");
         verticalSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         verticalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -84,7 +86,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
             motorFR.setPower((driverLeftY - driverLeftX - driverRightX) / speedDiv);
             motorBL.setPower((driverLeftY - driverLeftX + driverRightX) / speedDiv);
             motorBR.setPower((driverLeftY + driverLeftX - driverRightX) / speedDiv);
-            verticalSlide.setPower(gunnerRightY);
+            verticalSlide.setPower((gunnerRightY >= 0.0) ? gunnerRightY : 1.0);
             horizontalSlide.setPower(gunnerLeftX);
 
 
