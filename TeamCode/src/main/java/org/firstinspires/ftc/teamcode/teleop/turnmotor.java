@@ -31,13 +31,12 @@ public class turnmotor extends LinearOpMode {
            leftY = -gamepad1.left_stick_y;
            leftX = gamepad1.left_stick_x;
            rightX = gamepad1.right_stick_x;
-           motorFL.setPower((leftY+leftX+rightX)/speed);
-           motorBL.setPower((leftY-leftX+rightX)/speed);
-           motorFR.setPower((leftY-leftX-rightX)/speed);
-           motorBR.setPower((leftY+leftX-rightX)/speed);
-           telemetry.addLine("hello");
+           motorFL.setPower(Math.atan(1.12*((leftY+leftX+rightX)))/speed);
+           motorBL.setPower(Math.atan(1.12*((leftY-leftX+rightX)))/speed);
+           motorFR.setPower(Math.atan(1.12*((leftY-leftX-rightX)))/speed);
+           motorBR.setPower(Math.atan(1.12*((leftY+leftX-rightX)))/speed);
            telemetry.update();
-           if (gamepad1.right_trigger >= .5 ) {
+           if (gamepad1.left_stick_button || gamepad1.right_trigger >= 0.5) {
                speed = 1.0;
            } else if (gamepad1.left_trigger >= .5) {
                speed = 3.0;
