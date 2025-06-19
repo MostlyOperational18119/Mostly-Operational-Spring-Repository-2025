@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.services.Service.Planner;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.ejml.data.DMatrixRMaj;
 import org.ejml.simple.SimpleMatrix;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
@@ -11,6 +12,7 @@ import org.firstinspires.ftc.teamcode.services.Communication.DriveServiceInput;
 import org.firstinspires.ftc.teamcode.services.Communication.VisionServiceOutput;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.LinkedBlockingQueue;
 
 
@@ -35,7 +37,7 @@ public class PlannerService implements Runnable {
 
     HardwareMap hardwareMap;
 
-    State dwa(State currentState, Pose2D goal, ArrayList<Point> obstacles, double obstacleRadius) {
+    State dwa(State currentState, Pose2D goal, ArrayList<Pose2D> obstacles, double obstacleRadius) {
 
         // For now...
         return currentState;
@@ -51,7 +53,7 @@ public class PlannerService implements Runnable {
         return new Window(vmin, vmax, omin, omax);
     }
 
-    double[][] evaluate(State currentState, Window dynamicWindow, Pose2D goal, ArrayList<Point> obstacles, double obstacleRadius) {
+    double[][] evaluate(State currentState, Window dynamicWindow, Pose2D goal, ArrayList<Pose2D> obstacles, double obstacleRadius) {
         for (double i = dynamicWindow.vmin; i <= dynamicWindow.vmax; i += VELOCITY_RESOLUTION) {
             for (double j = dynamicWindow.omin; j <= dynamicWindow.omax; j += ANGULAR_VELOCITY_RESOLUTION) {
 
@@ -62,7 +64,40 @@ public class PlannerService implements Runnable {
     }
 
 
-//    SimpleMatrix
+    SimpleMatrix motionModel(State currentState, SimpleMatrix u) {
+        SimpleMatrix F = new SimpleMatrix(
+                new double[][] {
+                        {1, 0, 0, 0, 0},
+                        {0, 1, 0, 0, 0},
+                        {0, 0, 1, 0, 0},
+                        {0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0}
+                }
+        );
+
+        SimpleMatrix x = new SimpleMatrix(
+                new double[]{
+                        currentState.x,
+                        currentState.y,
+                        currentState.yaw,
+                        currentState.velocity,
+                        currentState.angularRate
+                }
+        );
+
+        // TODO: ADD DT
+        SimpleMatrix B = new SimpleMatrix(
+                new double[][] {
+                        {Math.cos(currentState.yaw), 0},
+                        {Math.sin(currentState.yaw), 0},
+                        {0, 0},
+                        {1, 0},
+                        {0, 1}
+                }
+        );
+
+        return (F.mult(x)).plus(B.mult(u));
+    }
 
 
     public PlannerService(HardwareMap hardwareMap, LinkedBlockingQueue<VisionServiceOutput> visionServiceOutputQueue, LinkedBlockingQueue<DriveServiceInput> driveServiceInputQueue) {

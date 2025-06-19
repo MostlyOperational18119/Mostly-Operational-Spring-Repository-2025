@@ -1,9 +1,12 @@
 package org.firstinspires.ftc.teamcode.services;
 
+import android.util.Log;
+
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.teamcode.services.Communication.HeartbeatInput;
 import org.firstinspires.ftc.teamcode.services.Communication.HeartbeatOutput;
+import org.firstinspires.ftc.teamcode.services.Communication.TeleOpServiceInput;
 import org.firstinspires.ftc.teamcode.services.Service.DriveService;
 import org.firstinspires.ftc.teamcode.services.Communication.DriveServiceInput;
 import org.firstinspires.ftc.teamcode.services.Service.Planner.PlannerService;
@@ -11,13 +14,15 @@ import org.firstinspires.ftc.teamcode.services.Service.TeleOpService;
 import org.firstinspires.ftc.teamcode.services.Service.VisionService;
 import org.firstinspires.ftc.teamcode.services.Communication.VisionServiceOutput;
 
+import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public abstract class ServiceOpMode extends OpMode {
-    private LinkedBlockingQueue<HeartbeatInput> visionServiceInputQueue;
-    private LinkedBlockingQueue<VisionServiceOutput> visionServiceOutputQueue;
-    private LinkedBlockingQueue<DriveServiceInput> driveServiceInputQueue;
-    private LinkedBlockingQueue<HeartbeatOutput> driveServiceOutputQueue;
+    protected LinkedBlockingQueue<HeartbeatInput> visionServiceInputQueue;
+    protected LinkedBlockingQueue<VisionServiceOutput> visionServiceOutputQueue;
+    protected LinkedBlockingQueue<DriveServiceInput> driveServiceInputQueue;
+    protected LinkedBlockingQueue<HeartbeatOutput> driveServiceOutputQueue;
+    protected LinkedBlockingQueue<TeleOpServiceInput> teleOpServiceInputQueue;
 
 
     private DriveService driveService;
@@ -27,52 +32,61 @@ public abstract class ServiceOpMode extends OpMode {
     private PlannerService plannerService;
     private Thread plannerServiceThread;
 
-    abstract boolean isTeleOp();
-    abstract TeleOpService getService();
-    private TeleOpService service;
-    private Thread serviceThread;
+    public abstract boolean isTeleOp();
+    public abstract TeleOpService getService();
+    private TeleOpService teleOpService;
+    private Thread teleOpServiceThread;
 
 
     @Override
     public void init() {
-        Boolean teleop = isTeleOp();
+        boolean teleOp = isTeleOp();
 
         this.visionServiceInputQueue = new LinkedBlockingQueue<>();
         this.visionServiceOutputQueue = new LinkedBlockingQueue<>();
         this.driveServiceInputQueue = new LinkedBlockingQueue<>();
         this.driveServiceOutputQueue = new LinkedBlockingQueue<>();
+        this.teleOpServiceInputQueue = new LinkedBlockingQueue<>();
 
         this.driveService = new DriveService(hardwareMap, driveServiceInputQueue);
-        this.visionService = new VisionService(hardwareMap, visionServiceInputQueue, visionServiceOutputQueue);
+//        this.visionService = new VisionService(hardwareMap, visionServiceInputQueue, visionServiceOutputQueue);
         this.plannerService = new PlannerService(hardwareMap, visionServiceOutputQueue, driveServiceInputQueue);
+        if (teleOp) {
+            this.teleOpService = getService();
+        }
 
 
         try {
             driveServiceThread = new Thread(driveService);
-            visionServiceThread = new Thread(visionService);
+//            visionServiceThread = new Thread(visionService);
             plannerServiceThread = new Thread(plannerService);
-            if (teleop) {
-
+            if (teleOp) {
+                teleOpServiceThread = new Thread(teleOpService);
             }
 
             driveServiceThread.start();
-            visionServiceThread.start();
+//            visionServiceThread.start();
             plannerServiceThread.start();
+            if (teleOp) {
+                teleOpServiceThread.start();
+            }
         } catch (Exception e) {
             telemetry.addData("Failed to start services", e.getLocalizedMessage());
+            Log.e("ServiceOpMode", Objects.requireNonNull(e.getLocalizedMessage()));
             terminateOpModeNow();
         }
     }
 
     @Override
     public void loop() {
-        requestOpModeStop();
+//        requestOpModeStop();
     }
 
     @Override
     public void stop() {
-        driveServiceThread.interrupt();
-        visionServiceThread.interrupt();
-        plannerServiceThread.interrupt();
+        if (driveServiceThread != null) driveServiceThread.interrupt();
+        if (visionServiceThread != null) visionServiceThread.interrupt();
+        if (plannerServiceThread != null) plannerServiceThread.interrupt();
+        if (isTeleOp()) teleOpServiceThread.interrupt();
     }
 }

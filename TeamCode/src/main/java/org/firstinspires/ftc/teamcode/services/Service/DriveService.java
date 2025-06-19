@@ -50,24 +50,28 @@ public class DriveService implements Runnable {
         try {
             while (true) {
                 DriveServiceInput input = inputQueue.poll(5, TimeUnit.SECONDS);
-                if (input.mode == DriveServiceInput.DriveServiceInputMode.MANUAL) {
-                    motorFL.setPower(input.flSpeed);
-                    motorFR.setPower(input.frSpeed);
-                    motorBL.setPower(input.blSpeed);
-                    motorBR.setPower(input.brSpeed);
-                    verticalSlide.setPower(input.verticalSlideSpeed);
-                    horizontalSlide.setPower(input.horizontalSlideSpeed);
-                } else if (input.mode == DriveServiceInput.DriveServiceInputMode.PLAN) {
-                    ChassisSpeeds speeds = new ChassisSpeeds(input.forwardSpeed, input.sidewaysSpeed, input.rotationSpeed);
 
-                    MecanumDriveWheelSpeeds wheelSpeeds = kinematics.toWheelSpeeds(speeds);
+                // It's not impossible
+                if (input != null ) {
+                    if (input.mode == DriveServiceInput.DriveServiceInputMode.MANUAL) {
+                        motorFL.setPower(input.flSpeed);
+                        motorFR.setPower(input.frSpeed);
+                        motorBL.setPower(input.blSpeed);
+                        motorBR.setPower(input.brSpeed);
+                        verticalSlide.setPower(input.verticalSlideSpeed);
+                        horizontalSlide.setPower(input.horizontalSlideSpeed);
+                    } else if (input.mode == DriveServiceInput.DriveServiceInputMode.PLAN) {
+                        ChassisSpeeds speeds = new ChassisSpeeds(input.forwardSpeed, input.sidewaysSpeed, input.rotationSpeed);
 
-                    wheelSpeeds.normalize(MAX_SPEED);
+                        MecanumDriveWheelSpeeds wheelSpeeds = kinematics.toWheelSpeeds(speeds);
 
-                    motorFL.setPower(wheelSpeeds.frontLeftMetersPerSecond / MAX_SPEED);
-                    motorFR.setPower(wheelSpeeds.frontLeftMetersPerSecond / MAX_SPEED);
-                    motorBL.setPower(wheelSpeeds.rearLeftMetersPerSecond / MAX_SPEED);
-                    motorBR.setPower(wheelSpeeds.rearRightMetersPerSecond / MAX_SPEED);
+                        wheelSpeeds.normalize(MAX_SPEED);
+
+                        motorFL.setPower(wheelSpeeds.frontLeftMetersPerSecond / MAX_SPEED);
+                        motorFR.setPower(wheelSpeeds.frontLeftMetersPerSecond / MAX_SPEED);
+                        motorBL.setPower(wheelSpeeds.rearLeftMetersPerSecond / MAX_SPEED);
+                        motorBR.setPower(wheelSpeeds.rearRightMetersPerSecond / MAX_SPEED);
+                    }
                 }
             }
         } catch (InterruptedException e) {
