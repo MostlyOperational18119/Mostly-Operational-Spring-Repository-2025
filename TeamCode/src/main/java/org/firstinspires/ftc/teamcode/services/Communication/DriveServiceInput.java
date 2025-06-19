@@ -15,6 +15,7 @@ public class DriveServiceInput {
     public Double brSpeed;
     public Double verticalSlideSpeed;
     public Double horizontalSlideSpeed;
+    public Boolean doBreak;
 
     // Plan mode
 
@@ -35,6 +36,23 @@ public class DriveServiceInput {
         this.brSpeed = brSpeed;
         this.verticalSlideSpeed = verticalSlideSpeed;
         this.horizontalSlideSpeed = horizontalSlideSpeed;
+        this.doBreak = false;
+
+        this.forwardSpeed = null;
+        this.sidewaysSpeed = null;
+        this.rotationSpeed = null;
+    }
+
+    public DriveServiceInput(Boolean doBreak) {
+        mode = DriveServiceInputMode.MANUAL;
+
+        this.flSpeed = 0.0;
+        this.frSpeed = 0.0;
+        this.blSpeed = 0.0;
+        this.brSpeed = 0.0;
+        this.verticalSlideSpeed = 0.0;
+        this.horizontalSlideSpeed = 0.0;
+        this.doBreak = doBreak;
 
         this.forwardSpeed = null;
         this.sidewaysSpeed = null;
@@ -50,6 +68,7 @@ public class DriveServiceInput {
         this.brSpeed = null;
         this.verticalSlideSpeed = null;
         this.horizontalSlideSpeed = null;
+        this.doBreak = null;
 
         this.forwardSpeed = forwardSpeed;
         this.sidewaysSpeed = sidewaysSpeed;

@@ -48,7 +48,7 @@ public abstract class ServiceOpMode extends OpMode {
         this.driveServiceOutputQueue = new LinkedBlockingQueue<>();
         this.teleOpServiceInputQueue = new LinkedBlockingQueue<>();
 
-        this.driveService = new DriveService(hardwareMap, driveServiceInputQueue);
+        this.driveService = new DriveService(hardwareMap, driveServiceInputQueue, true);
 //        this.visionService = new VisionService(hardwareMap, visionServiceInputQueue, visionServiceOutputQueue);
         this.plannerService = new PlannerService(hardwareMap, visionServiceOutputQueue, driveServiceInputQueue);
         if (teleOp) {
@@ -80,6 +80,10 @@ public abstract class ServiceOpMode extends OpMode {
     @Override
     public void loop() {
 //        requestOpModeStop();
+
+        if (isTeleOp()) {
+            teleOpServiceInputQueue.add(new TeleOpServiceInput(gamepad1, gamepad2));
+        }
     }
 
     @Override

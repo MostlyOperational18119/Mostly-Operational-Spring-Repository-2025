@@ -40,9 +40,25 @@ public class DriveService implements Runnable {
 
     final private LinkedBlockingQueue<DriveServiceInput> inputQueue;
 
-    public DriveService(HardwareMap hardwareMap, LinkedBlockingQueue<DriveServiceInput> inputQueue) {
+    private Boolean isOnlyWheels;
+
+    public DriveService(HardwareMap hardwareMap, LinkedBlockingQueue<DriveServiceInput> inputQueue, Boolean isOnlyWheels) {
         this.hardwareMap = hardwareMap;
         this.inputQueue = inputQueue;
+        this.isOnlyWheels = isOnlyWheels;
+
+        motorFL = hardwareMap.get(DcMotor.class, "motorFL");
+        motorFR = hardwareMap.get(DcMotor.class, "motorFR");
+        motorBL = hardwareMap.get(DcMotor.class, "motorBL");
+        motorBR = hardwareMap.get(DcMotor.class, "motorBR");
+
+//        motorFR.setDirection(DcMotorSimple.Direction.REVERSE);
+        motorFL.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        if (!isOnlyWheels) {
+            horizontalSlide = hardwareMap.get(DcMotor.class, "horizontalSlide");
+            verticalSlide = hardwareMap.get(DcMotor.class, "verticalSlide");
+        }
     }
 
     @Override
@@ -53,13 +69,31 @@ public class DriveService implements Runnable {
 
                 // It's not impossible
                 if (input != null ) {
-                    if (input.mode == DriveServiceInput.DriveServiceInputMode.MANUAL) {
+                    if (input.mode == DriveServiceInput.DriveServiceInputMode.MANUAL && !input.doBreak) {
                         motorFL.setPower(input.flSpeed);
                         motorFR.setPower(input.frSpeed);
                         motorBL.setPower(input.blSpeed);
                         motorBR.setPower(input.brSpeed);
-                        verticalSlide.setPower(input.verticalSlideSpeed);
-                        horizontalSlide.setPower(input.horizontalSlideSpeed);
+                        if (!isOnlyWheels) {
+                            verticalSlide.setPower(input.verticalSlideSpeed);
+                            horizontalSlide.setPower(input.horizontalSlideSpeed);
+                        }
+                    } else if (input.mode == DriveServiceInput.DriveServiceInputMode.MANUAL && input.doBreak) {
+                        motorFL.setPower(-motorFL.getPower());
+                        motorFR.setPower(-motorFR.getPower());
+                        motorBL.setPower(-motorBL.getPower());
+                        motorBR.setPower(-motorBR.getPower());
+                        if (!isOnlyWheels) {
+                            verticalSlide.setPower(0.0);
+                            horizontalSlide.setPower(0.0);
+                        }
+
+                        Thread.sleep(50);
+
+                        motorFL.setPower(0.0);
+                        motorFR.setPower(0.0);
+                        motorBL.setPower(0.0);
+                        motorBR.setPower(0.0);
                     } else if (input.mode == DriveServiceInput.DriveServiceInputMode.PLAN) {
                         ChassisSpeeds speeds = new ChassisSpeeds(input.forwardSpeed, input.sidewaysSpeed, input.rotationSpeed);
 
