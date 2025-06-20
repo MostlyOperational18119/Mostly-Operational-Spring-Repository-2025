@@ -75,7 +75,7 @@ public class PlannerService implements Runnable {
 
                 double toGoalCost = calcToGoalCost(trajectory, goal);
                 double speedCost = SPEED_COST_GAIN * (MAX_LINEAR_VELOCITY - trajectory[trajectory.length - 1][3]);
-                double obCost = ;
+//                double obCost = ;
             }
 
         }
@@ -88,13 +88,13 @@ public class PlannerService implements Runnable {
         double dy = goal.getY(DistanceUnit.CM) - trajectory[trajectory.length - 1][1];
 
         double errorAngle = Math.atan2(dy, dx);
-        double costAngle = errorAngle - trajectory[trajectory.length - 1][2]
+        double costAngle = errorAngle - trajectory[trajectory.length - 1][2];
 
         // Le cost
         return Math.abs(Math.atan2(Math.sin(costAngle), Math.cos(costAngle)));
     }
 
-    
+
 
 
     double[][] predictTrajectory(double[] state, double v, double y) {
