@@ -69,7 +69,6 @@ public class FirstJavaTeleOp extends LinearOpMode {
             driverLeftX = gamepad1.left_stick_x;
             driverLeftY = -gamepad1.left_stick_y;
             driverRightX = gamepad1.right_stick_x;
-
             gunnerRightY = gamepad2.right_stick_y;
             gunnerLeftX = gamepad2.left_stick_x;
 
