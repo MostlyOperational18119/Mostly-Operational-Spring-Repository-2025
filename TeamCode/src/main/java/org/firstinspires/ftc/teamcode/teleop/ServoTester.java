@@ -12,7 +12,7 @@ public class ServoTester extends LinearOpMode {
         double Position = 0;
         Gamepad currentGamepad1 = new Gamepad();
         Gamepad previousGamepad1 = new Gamepad();
-        Servo dropperServo = hardwareMap.servo.get("dropperServo");
+        Servo dropperServo = hardwareMap.servo.get("plungerServo");
 
         waitForStart();
         while (opModeIsActive()) {

@@ -18,12 +18,12 @@ public class PicklebotTeleop extends LinearOpMode {
         double DriveSpeedDivider = 5.0;
         int rotationMotorMax = 0; //unknown
         int rotationMotorMin = -300; //unknown
-        double lockServoLocked = 0.88; //unknown
-        double lockServoUnlocked = 0.55; //unknown
+        double lockServoLocked = 0.55; //unknown
+        double lockServoUnlocked = 0.2; //unknown
         double dropperServoIntake = 0.165; //unknown
         double dropperServoDrop = 0.06; //unknown
-        double plungerServoLoaded = 0.83; //unknown
-        double plungerServoFire = 0.59; //unknown
+        double plungerServoLoaded = 0.04; //unknown
+        double plungerServoFire = 0.23; //unknown
         //END SETTINGS//
 
         float driverLeftX = gamepad1.left_stick_x;
