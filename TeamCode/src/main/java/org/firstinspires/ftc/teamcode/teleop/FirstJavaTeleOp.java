@@ -100,7 +100,6 @@ public class FirstJavaTeleOp extends LinearOpMode {
             gunnerRightTrigger = gamepad2.right_trigger;
             gunnerLeftTrigger = gamepad2.left_trigger;
 
-
             LLResult result = limelight.getLatestResult();
             LLStatus status = limelight.getStatus();
             double[] out = new double[] {};
