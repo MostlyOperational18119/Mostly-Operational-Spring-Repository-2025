@@ -5,6 +5,8 @@ import android.util.Pair;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.apache.commons.math4.legacy.linear.MatrixUtils;
+import org.apache.commons.math4.legacy.linear.RealMatrix;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.GoBildaPinpointDriver;
@@ -13,6 +15,7 @@ import org.firstinspires.ftc.teamcode.services.Communication.VisionServiceOutput
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.OptionalDouble;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
@@ -78,6 +81,8 @@ public class PlannerService implements Runnable {
                 double toGoalCost = TO_GOAL_COST_GAIN * calcToGoalCost(trajectory, goal);
                 double speedCost = SPEED_COST_GAIN * (MAX_LINEAR_VELOCITY - trajectory[trajectory.length - 1][3]);
                 double obCost = OBSTACLE_COST_GAIN * calcObstacleCost(trajectory);
+
+                double finalCost = toGoalCost + speedCost + obCost;
             }
 
         }
@@ -105,10 +110,36 @@ public class PlannerService implements Runnable {
 
         double[][] r = hypot2DArray(dx, dy);
 
+        // Do yucky matrix-based bounds checking D:
+
         double[] yaw = getColumn(trajectory, 2);
 
-        // For now, so compile works and I can push without breaking other peoples builds
-        return 0.0;
+        // Use streams (my beloved) to do cosine operations on arrays
+        double[][][] rotation = new double[][][] {
+                {
+                        Arrays.stream(yaw).map(Math::cos).toArray(),
+                        Arrays.stream(yaw).map(num -> -Math.sin(num)).toArray()
+                },
+                {
+                        Arrays.stream(yaw).map(Math::sin).toArray(),
+                        Arrays.stream(yaw).map(Math::cos).toArray()
+                }
+        };
+
+        rotation = transpose3DArray(rotation, new int[] {2, 0, 1});
+
+
+//        RealMatrix rotationMatrix = MatrixUtils.createRealMatrix(rotation);
+
+        // Finish horrid bounds checking :D
+
+        OptionalDouble rMinOptional = DoubleStream.of(r[0]).min();
+
+        assert rMinOptional.isPresent();
+
+        double rMin = rMinOptional.getAsDouble();
+
+        return 1.0 / rMin;
     }
 
     double[] getColumn(double[][] src, int index) {
