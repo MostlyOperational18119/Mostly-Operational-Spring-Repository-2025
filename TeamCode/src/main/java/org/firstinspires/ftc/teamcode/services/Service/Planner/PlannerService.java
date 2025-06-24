@@ -5,6 +5,8 @@ import android.util.Pair;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.apache.commons.math4.legacy.linear.MatrixUtils;
+import org.apache.commons.math4.legacy.linear.RealMatrix;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.GoBildaPinpointDriver;
@@ -13,7 +15,10 @@ import org.firstinspires.ftc.teamcode.services.Communication.VisionServiceOutput
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.OptionalDouble;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
 
 
 // Heavily inspired by https://github.com/AtsushiSakai/PythonRobotics/blob/master/PathPlanning/DynamicWindowApproach/dynamic_window_approach.py
@@ -40,7 +45,7 @@ public class PlannerService implements Runnable {
     final private double VELOCITY_RESOLUTION = 0.01;
     final private double ANGULAR_VELOCITY_RESOLUTION = Math.toRadians(1.0);
 
-    private ArrayList<Pose2D> obstacles = new ArrayList<>();
+    private ArrayList<double[]> obstacles = new ArrayList<>();
 
     // DWA Methods
 
@@ -73,9 +78,11 @@ public class PlannerService implements Runnable {
             for (double y = dynWin[2]; y <= dynWin[3]; y += ANGULAR_VELOCITY_RESOLUTION) {
                 double[][] trajectory = predictTrajectory(state, v, y);
 
-                double toGoalCost = calcToGoalCost(trajectory, goal);
+                double toGoalCost = TO_GOAL_COST_GAIN * calcToGoalCost(trajectory, goal);
                 double speedCost = SPEED_COST_GAIN * (MAX_LINEAR_VELOCITY - trajectory[trajectory.length - 1][3]);
-//                double obCost = ;
+                double obCost = OBSTACLE_COST_GAIN * calcObstacleCost(trajectory);
+
+                double finalCost = toGoalCost + speedCost + obCost;
             }
 
         }
@@ -94,7 +101,112 @@ public class PlannerService implements Runnable {
         return Math.abs(Math.atan2(Math.sin(costAngle), Math.cos(costAngle)));
     }
 
+    double calcObstacleCost(double[][] trajectory) {
+        double[] ox = getColumn(obstacles, 0);
+        double[] oy = getColumn(obstacles, 1);
 
+        double[][] dx = subtractArrays(getColumn(trajectory, 0),  ox);
+        double[][] dy = subtractArrays(getColumn(trajectory, 1), oy);
+
+        double[][] r = hypot2DArray(dx, dy);
+
+        // Do yucky matrix-based bounds checking D:
+
+        double[] yaw = getColumn(trajectory, 2);
+
+        // Use streams (my beloved) to do cosine operations on arrays
+        double[][][] rotation = new double[][][] {
+                {
+                        Arrays.stream(yaw).map(Math::cos).toArray(),
+                        Arrays.stream(yaw).map(num -> -Math.sin(num)).toArray()
+                },
+                {
+                        Arrays.stream(yaw).map(Math::sin).toArray(),
+                        Arrays.stream(yaw).map(Math::cos).toArray()
+                }
+        };
+
+        rotation = transpose3DArray(rotation, new int[] {2, 0, 1});
+
+
+//        RealMatrix rotationMatrix = MatrixUtils.createRealMatrix(rotation);
+
+        // Finish horrid bounds checking :D
+
+        OptionalDouble rMinOptional = DoubleStream.of(r[0]).min();
+
+        assert rMinOptional.isPresent();
+
+        double rMin = rMinOptional.getAsDouble();
+
+        return 1.0 / rMin;
+    }
+
+    double[] getColumn(double[][] src, int index) {
+        return Arrays.stream(src).mapToDouble(doubles -> doubles[index]).toArray();
+    }
+
+    double[] getColumn(ArrayList<double[]> src, int index) {
+        return src.stream().mapToDouble(doubles -> doubles[index]).toArray();
+    }
+
+    // Waow
+    double[][] subtractArrays(double[] src1, double[] src2) {
+        double[][] result = new double[src1.length][src2.length];
+
+        for (int i = 0; i < src1.length; i++) {
+            for (int j = 0; j < src2.length; j++) {
+                result[i][j] = src1[i] - src2[j];
+            }
+        }
+
+        return result;
+    }
+
+    double[][] hypot2DArray(double[][] x, double[][] y) {
+        // Better not be empty, or it'll crash
+        assert x.length <= 1;
+        assert x[0].length <= 1;
+
+        // Better be the same dimensions
+        assert x.length == y.length;
+        assert x[0].length == y[0].length;
+
+        double[][] result = new double[x.length][x[0].length];
+
+        for (int i = 0; i < x.length; i++) {
+            for (int j = 0; j < x[0].length; j++) {
+                // Set the result in the corresponding slot to the hypotenuse of the corresponding x and y :D
+                result[i][j] = Math.hypot(x[i][j], y[i][j]);
+            }
+        }
+
+        return result;
+    }
+
+    double[][][] transpose3DArray(double[][][] src, int[] axes) {
+        int[] dims = new int[] { src.length, src[0].length, src[0][0].length };
+
+        int newDim0 = dims[axes[0]];
+        int newDim1 = dims[axes[1]];
+        int newDim2 = dims[axes[2]];
+
+        double[][][] transposedArray = new double[newDim0][newDim1][newDim2];
+
+        for (int i = 0; i < dims[0]; i++) {
+            for (int j = 0; j < dims[1]; j++) {
+                for (int k = 0; k < dims[2]; k++) {
+                    int[] indexes = new int[]{i, j, k};
+                    transposedArray
+                            [indexes[axes[0]]]
+                            [indexes[axes[1]]]
+                            [indexes[axes[2]]] = src[i][j][k];
+                }
+            }
+        }
+
+        return transposedArray;
+    }
 
 
     double[][] predictTrajectory(double[] state, double v, double y) {

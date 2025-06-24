@@ -48,10 +48,10 @@ public class FirstJavaTeleOp extends LinearOpMode {
         motorFL.setDirection(DcMotorSimple.Direction.REVERSE);
         motorBL.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        Gamepad driverCurrent = new Gamepad();
-        Gamepad driverPrevious = new Gamepad();
-        Gamepad gunnerCurrent = new Gamepad();
-        Gamepad gunnerPrevious = new Gamepad();
+        Gamepad driverCurrent = gamepad1;
+        Gamepad driverPrevious = gamepad1;
+        Gamepad gunnerCurrent = gamepad2;
+        Gamepad gunnerPrevious = gamepad2;
 
         float driverLeftX;
         float driverLeftY;
@@ -61,6 +61,15 @@ public class FirstJavaTeleOp extends LinearOpMode {
         float gunnerLeftY;
         float gunnerRightTrigger;
         float gunnerLeftTrigger;
+        boolean gunnerRightDown;
+        boolean gunnerLeftDown;
+        boolean gunnerDown;
+        boolean gunnerUp;
+        boolean gunnerRightBumper;
+        boolean gunnerLeftBumper;
+
+        boolean lastGunnerRightBumper = false;
+        boolean lastGunnerLeftBumper = false;
 
         double speedDiv = 1.0;
         int vertTarget = 0;
@@ -76,7 +85,6 @@ public class FirstJavaTeleOp extends LinearOpMode {
 
         limelight.start();
 
-
         while (opModeIsActive()) {
 
             driverLeftX = gamepad1.left_stick_x;
@@ -85,14 +93,13 @@ public class FirstJavaTeleOp extends LinearOpMode {
 
             gunnerRightY = -gamepad2.right_stick_y;
             gunnerLeftY = gamepad2.left_stick_y;
+            gunnerDown = gamepad2.dpad_down;
+            gunnerUp = gamepad2.dpad_up;
+            gunnerRightBumper = gamepad2.right_bumper;
+            gunnerLeftBumper = gamepad2.left_bumper;
             gunnerRightTrigger = gamepad2.right_trigger;
             gunnerLeftTrigger = gamepad2.left_trigger;
 
-            gunnerPrevious.copy(gunnerCurrent);
-            driverCurrent.copy(driverPrevious);
-
-            gunnerCurrent.copy(gamepad2);
-            driverCurrent.copy(gamepad1);
 
             LLResult result = limelight.getLatestResult();
             LLStatus status = limelight.getStatus();
@@ -128,9 +135,9 @@ public class FirstJavaTeleOp extends LinearOpMode {
             double derivative = -verticalSlide.getVelocity();
             double verticalPower = P*error + D*derivative;
 
-            if (gunnerCurrent.dpad_down && !gunnerPrevious.dpad_down) {
+            if (gunnerDown) {
                 vertTarget = 0;
-            } else if (gunnerCurrent.dpad_up && !gunnerPrevious.dpad_up) {
+            } else if (gunnerUp) {
                 vertTarget = vertTop;
             }
 
@@ -138,9 +145,9 @@ public class FirstJavaTeleOp extends LinearOpMode {
 
             vertTarget = vertTarget + (int) (10*gunnerRightY);
 
-            if (gunnerCurrent.left_bumper && !gunnerPrevious.left_bumper) {
+            if (gunnerLeftBumper && !lastGunnerLeftBumper) {
                 vertTop -= 250;
-            } else if (gunnerCurrent.right_bumper && !gunnerPrevious.right_bumper) {
+            } else if (gunnerRightBumper && !lastGunnerRightBumper) {
                 vertTop += 250;
             }
 
@@ -151,6 +158,15 @@ public class FirstJavaTeleOp extends LinearOpMode {
             } else {
                 intakeMotor.setPower(-gunnerLeftTrigger);
             }
+
+            lastGunnerLeftBumper = gunnerLeftBumper;
+            lastGunnerRightBumper = gunnerRightBumper;
+
+            driverPrevious.copy(driverCurrent);
+            driverCurrent.copy(gamepad1);
+
+            gunnerPrevious.copy(gunnerCurrent);
+            gunnerCurrent.copy(gamepad2);
 
             telemetry.addLine("Running");
             telemetry.addData("vertical slide target pos: ", vertTarget);
