@@ -5,8 +5,11 @@ import android.util.Pair;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.apache.commons.math4.legacy.linear.Array2DRowRealMatrix;
+import org.apache.commons.math4.legacy.linear.ArrayRealVector;
 import org.apache.commons.math4.legacy.linear.MatrixUtils;
 import org.apache.commons.math4.legacy.linear.RealMatrix;
+import org.apache.commons.math4.legacy.linear.RealVector;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.GoBildaPinpointDriver;
@@ -35,7 +38,7 @@ public class PlannerService implements Runnable {
     final private double OBSTACLE_COST_GAIN = 1.0;
 
     // DWA FUN FACTS
-    // State [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)]
+    // State is [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)]
 
     // Kinematics constants
     final private double MAX_LINEAR_VELOCITY = 0.5;
@@ -44,6 +47,8 @@ public class PlannerService implements Runnable {
     final private double MAX_ANGULAR_ACCELERATION = Math.toRadians(50.0);
     final private double VELOCITY_RESOLUTION = 0.01;
     final private double ANGULAR_VELOCITY_RESOLUTION = Math.toRadians(1.0);
+    final private double ROBOT_LENGTH = 0.16; // BOTH IN METERS
+    final private double ROBOT_WIDTH = 0.16; // TODO: GET THE CORRECT MEASUREMENTS, OTHERWISE WE WILL CRASH INTO OBSTACLES AND WE WILL BE SAD
 
     private ArrayList<double[]> obstacles = new ArrayList<>();
 
@@ -112,24 +117,43 @@ public class PlannerService implements Runnable {
 
         // Do yucky matrix-based bounds checking D:
 
-        double[] yaw = getColumn(trajectory, 2);
+        double halfRobotLength = ROBOT_LENGTH / 2.0;
+        double halfRobotWidth = ROBOT_WIDTH / 2.0;
 
-        // Use streams (my beloved) to do cosine operations on arrays
-        double[][][] rotation = new double[][][] {
-                {
-                        Arrays.stream(yaw).map(Math::cos).toArray(),
-                        Arrays.stream(yaw).map(num -> -Math.sin(num)).toArray()
-                },
-                {
-                        Arrays.stream(yaw).map(Math::sin).toArray(),
-                        Arrays.stream(yaw).map(Math::cos).toArray()
+        for (int i = 0; i < trajectory.length; i++) {
+            // Use epic matrix to check if we collided with the evil obstacles
+            double currentYaw = trajectory[i][2];
+            RealMatrix rotationMatrix = new Array2DRowRealMatrix(new double[][]{
+                    {Math.cos(currentYaw), -Math.sin(currentYaw)},
+                    {Math.sin(currentYaw), Math.cos(currentYaw)}
+            });
+
+            for (int j = 0; j < obstacles.size(); j++) {
+                // Calculate the positon of the obstacle in relation to the robot
+                double relativeX = obstacles.get(j)[0] - trajectory[i][0];
+                double relativeY = obstacles.get(j)[1] - trajectory[i][1];
+
+                // Make a vector for the relative positions
+                RealVector relativeVector = new ArrayRealVector(new double[] {relativeX,relativeY});
+
+                // Rotate our vector with our epic Matrix to put it in the robot's coordinate frame
+                RealVector rotatedLocalObstacle = rotationMatrix.operate(relativeVector);
+
+                // Get the values of the rotated vector
+                double rotateRelativeObstacleX = rotatedLocalObstacle.getEntry(0);
+                double rotateRelativeObstacleY = rotatedLocalObstacle.getEntry(1);
+
+                // Did we collide?
+                if (
+                        rotateRelativeObstacleX <= halfRobotLength &&
+                        rotateRelativeObstacleY <= halfRobotWidth &&
+                        rotateRelativeObstacleX >= -halfRobotLength &&
+                        rotateRelativeObstacleY >= -halfRobotWidth
+                ) {
+                    return Double.POSITIVE_INFINITY; // Uh oh stinky, we collided
                 }
-        };
-
-        rotation = transpose3DArray(rotation, new int[] {2, 0, 1});
-
-
-//        RealMatrix rotationMatrix = MatrixUtils.createRealMatrix(rotation);
+            }
+        }
 
         // Finish horrid bounds checking :D
 
