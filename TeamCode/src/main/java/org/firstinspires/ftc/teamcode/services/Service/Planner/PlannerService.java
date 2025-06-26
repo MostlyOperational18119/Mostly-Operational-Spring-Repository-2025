@@ -36,6 +36,7 @@ public class PlannerService implements Runnable {
     final private double TO_GOAL_COST_GAIN = 0.15;
     final private double SPEED_COST_GAIN = 1.0;
     final private double OBSTACLE_COST_GAIN = 1.0;
+    final private double ROBOT_STUCK_FLAG = 0.001;
 
     // DWA FUN FACTS
     // State is [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)]
@@ -88,6 +89,16 @@ public class PlannerService implements Runnable {
                 double obCost = OBSTACLE_COST_GAIN * calcObstacleCost(trajectory);
 
                 double finalCost = toGoalCost + speedCost + obCost;
+
+                if (minimumCost >= finalCost) {
+                    minimumCost = finalCost;
+                    bestU = new double[] { v, y };
+                    bestTrajectory = trajectory;
+
+                    if (Math.abs(v) < ROBOT_STUCK_FLAG && Math.abs(state[3]) < ROBOT_STUCK_FLAG) {
+                        bestU[1] = -MAX_ANGULAR_ACCELERATION;
+                    }
+                }
             }
 
         }
