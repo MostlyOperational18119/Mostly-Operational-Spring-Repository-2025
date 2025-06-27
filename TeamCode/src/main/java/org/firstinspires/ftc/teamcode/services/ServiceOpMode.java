@@ -91,6 +91,6 @@ public abstract class ServiceOpMode extends OpMode {
         if (driveServiceThread != null) driveServiceThread.interrupt();
         if (visionServiceThread != null) visionServiceThread.interrupt();
         if (plannerServiceThread != null) plannerServiceThread.interrupt();
-        if (isTeleOp()) teleOpServiceThread.interrupt();
+        if (isTeleOp() && teleOpServiceThread != null) teleOpServiceThread.interrupt();
     }
 }

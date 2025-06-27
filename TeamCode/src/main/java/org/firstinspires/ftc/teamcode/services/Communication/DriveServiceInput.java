@@ -1,5 +1,11 @@
 package org.firstinspires.ftc.teamcode.services.Communication;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+
+import java.util.stream.Stream;
+
 public class DriveServiceInput {
     public enum DriveServiceInputMode {
         MANUAL,
@@ -19,9 +25,7 @@ public class DriveServiceInput {
 
     // Plan mode
 
-    public Double forwardSpeed;
-    public Double sidewaysSpeed;
-    public Double rotationSpeed;
+    public double[] control;
 
     public DriveServiceInput() {
         mode = DriveServiceInputMode.PLAN;
@@ -38,9 +42,7 @@ public class DriveServiceInput {
         this.horizontalSlideSpeed = horizontalSlideSpeed;
         this.doBreak = false;
 
-        this.forwardSpeed = null;
-        this.sidewaysSpeed = null;
-        this.rotationSpeed = null;
+        this.control = null;
     }
 
     public DriveServiceInput(Boolean doBreak) {
@@ -54,12 +56,10 @@ public class DriveServiceInput {
         this.horizontalSlideSpeed = 0.0;
         this.doBreak = doBreak;
 
-        this.forwardSpeed = null;
-        this.sidewaysSpeed = null;
-        this.rotationSpeed = null;
+        this.control = null;
     }
 
-    public DriveServiceInput(Double forwardSpeed, Double sidewaysSpeed, Double rotationSpeed) {
+    public DriveServiceInput(double[] control) {
         mode = DriveServiceInputMode.PLAN;
 
         this.flSpeed = null;
@@ -70,8 +70,6 @@ public class DriveServiceInput {
         this.horizontalSlideSpeed = null;
         this.doBreak = null;
 
-        this.forwardSpeed = forwardSpeed;
-        this.sidewaysSpeed = sidewaysSpeed;
-        this.rotationSpeed = rotationSpeed;
+        this.control = control;
     }
 }

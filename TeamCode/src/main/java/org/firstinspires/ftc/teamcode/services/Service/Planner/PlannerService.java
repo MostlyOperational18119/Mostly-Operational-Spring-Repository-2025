@@ -10,8 +10,10 @@ import org.apache.commons.math4.legacy.linear.ArrayRealVector;
 import org.apache.commons.math4.legacy.linear.MatrixUtils;
 import org.apache.commons.math4.legacy.linear.RealMatrix;
 import org.apache.commons.math4.legacy.linear.RealVector;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+import org.firstinspires.ftc.robotcore.external.navigation.UnnormalizedAngleUnit;
 import org.firstinspires.ftc.teamcode.GoBildaPinpointDriver;
 import org.firstinspires.ftc.teamcode.services.Communication.DriveServiceInput;
 import org.firstinspires.ftc.teamcode.services.Communication.VisionServiceOutput;
@@ -52,6 +54,9 @@ public class PlannerService implements Runnable {
     final private double ROBOT_WIDTH = 0.16; // TODO: GET THE CORRECT MEASUREMENTS, OTHERWISE WE WILL CRASH INTO OBSTACLES AND WE WILL BE SAD
 
     private ArrayList<double[]> obstacles = new ArrayList<>();
+
+    private Pose2D goal = new Pose2D(DistanceUnit.METER, 0.5, 0.5, AngleUnit.RADIANS, 0.0);
+    private boolean goalActive = true;
 
     // DWA Methods
 
@@ -107,8 +112,8 @@ public class PlannerService implements Runnable {
     }
 
     double calcToGoalCost(double[][] trajectory, Pose2D goal) {
-        double dx = goal.getX(DistanceUnit.CM) - trajectory[trajectory.length - 1][0];
-        double dy = goal.getY(DistanceUnit.CM) - trajectory[trajectory.length - 1][1];
+        double dx = goal.getX(DistanceUnit.METER) - trajectory[trajectory.length - 1][0];
+        double dy = goal.getY(DistanceUnit.METER) - trajectory[trajectory.length - 1][1];
 
         double errorAngle = Math.atan2(dy, dx);
         double costAngle = errorAngle - trajectory[trajectory.length - 1][2];
@@ -219,30 +224,6 @@ public class PlannerService implements Runnable {
         return result;
     }
 
-    double[][][] transpose3DArray(double[][][] src, int[] axes) {
-        int[] dims = new int[] { src.length, src[0].length, src[0][0].length };
-
-        int newDim0 = dims[axes[0]];
-        int newDim1 = dims[axes[1]];
-        int newDim2 = dims[axes[2]];
-
-        double[][][] transposedArray = new double[newDim0][newDim1][newDim2];
-
-        for (int i = 0; i < dims[0]; i++) {
-            for (int j = 0; j < dims[1]; j++) {
-                for (int k = 0; k < dims[2]; k++) {
-                    int[] indexes = new int[]{i, j, k};
-                    transposedArray
-                            [indexes[axes[0]]]
-                            [indexes[axes[1]]]
-                            [indexes[axes[2]]] = src[i][j][k];
-                }
-            }
-        }
-
-        return transposedArray;
-    }
-
 
     double[][] predictTrajectory(double[] state, double v, double y) {
         double[][] trajectory = new double[][] { state };
@@ -288,14 +269,37 @@ public class PlannerService implements Runnable {
 //        State robotState = new State();
 
         while (true) {
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
             VisionServiceOutput visionOutput = visionServiceOutputQueue.poll();
 
             if (visionOutput != null) {
                 if (visionOutput.type == VisionServiceOutput.VisionResultType.ROBOT) {
                     // Probably don't wanna crash into another bot, inform the planner of its presence and position
-
+                    // Not implemented yet, so pretend it doesn't exist
+                } else {
+                    // Figure it out later :D
                 }
             }
+
+            if (!goalActive) continue;
+
+            double[] state = new double[] {
+                    pinpoint.getPosX(DistanceUnit.METER), pinpoint.getPosY(DistanceUnit.METER), pinpoint.getHeading(AngleUnit.RADIANS),
+                    Math.hypot(pinpoint.getVelX(DistanceUnit.METER), pinpoint.getPosY(DistanceUnit.METER)), pinpoint.getHeadingVelocity(UnnormalizedAngleUnit.RADIANS)
+            };
+
+            double[] dynamicWindow = dynamicWindow(state);
+            Pair<double[], double[][]> controlAndTrajectory = calcControlAndTrajectory(state, dynamicWindow, goal);
+            double[] control = controlAndTrajectory.first;
+            double[][] trajectory = controlAndTrajectory.second;
+
+            DriveServiceInput driveInput = new DriveServiceInput();
+
         }
     }
 }

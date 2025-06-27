@@ -1,9 +1,5 @@
 package org.firstinspires.ftc.teamcode.services.Service;
 
-import com.arcrobotics.ftclib.geometry.Translation2d;
-import com.arcrobotics.ftclib.kinematics.wpilibkinematics.ChassisSpeeds;
-import com.arcrobotics.ftclib.kinematics.wpilibkinematics.MecanumDriveKinematics;
-import com.arcrobotics.ftclib.kinematics.wpilibkinematics.MecanumDriveWheelSpeeds;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -21,22 +17,6 @@ public class DriveService implements Runnable {
     DcMotor verticalSlide;
     DcMotor horizontalSlide;
     HardwareMap hardwareMap;
-
-    // Constants for FTCLib Kinematics, double check at some point
-    // 23 cm wide 30 cm long
-    final Translation2d motorFLLocation = new Translation2d(-0.115, 0.15);
-    final Translation2d motorFRLocation = new Translation2d(0.115, 0.15);
-    final Translation2d motorBLLocation = new Translation2d(-0.115, -0.15);
-    final Translation2d motorBRLocation = new Translation2d(0.115, -0.15);
-
-    final double MAX_SPEED = 10.0; // m/sec
-
-    MecanumDriveKinematics kinematics = new MecanumDriveKinematics(
-            motorFLLocation,
-            motorFRLocation,
-            motorBLLocation,
-            motorBRLocation
-    );
 
     final private LinkedBlockingQueue<DriveServiceInput> inputQueue;
 
@@ -95,16 +75,13 @@ public class DriveService implements Runnable {
                         motorBL.setPower(0.0);
                         motorBR.setPower(0.0);
                     } else if (input.mode == DriveServiceInput.DriveServiceInputMode.PLAN) {
-                        ChassisSpeeds speeds = new ChassisSpeeds(input.forwardSpeed, input.sidewaysSpeed, input.rotationSpeed);
+                        double posControl = input.control[0];
+                        double rotControl = input.control[1];
 
-                        MecanumDriveWheelSpeeds wheelSpeeds = kinematics.toWheelSpeeds(speeds);
-
-                        wheelSpeeds.normalize(MAX_SPEED);
-
-                        motorFL.setPower(wheelSpeeds.frontLeftMetersPerSecond / MAX_SPEED);
-                        motorFR.setPower(wheelSpeeds.frontLeftMetersPerSecond / MAX_SPEED);
-                        motorBL.setPower(wheelSpeeds.rearLeftMetersPerSecond / MAX_SPEED);
-                        motorBR.setPower(wheelSpeeds.rearRightMetersPerSecond / MAX_SPEED);
+                        motorFL.setPower(posControl + rotControl);
+                        motorFR.setPower(posControl - rotControl);
+                        motorBL.setPower(posControl + rotControl);
+                        motorBR.setPower(posControl - rotControl);
                     }
                 }
             }
