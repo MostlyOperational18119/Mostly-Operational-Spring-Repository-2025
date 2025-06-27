@@ -1,11 +1,20 @@
 package org.firstinspires.ftc.teamcode.services.Service;
 
+import android.util.Log;
+
+import com.arcrobotics.ftclib.geometry.Translation2d;
+import com.arcrobotics.ftclib.kinematics.wpilibkinematics.ChassisSpeeds;
+import com.arcrobotics.ftclib.kinematics.wpilibkinematics.MecanumDriveKinematics;
+import com.arcrobotics.ftclib.kinematics.wpilibkinematics.MecanumDriveWheelSpeeds;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.GoBildaPinpointDriver;
 import org.firstinspires.ftc.teamcode.services.Communication.DriveServiceInput;
 
+import java.util.Arrays;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -17,10 +26,27 @@ public class DriveService implements Runnable {
     DcMotor verticalSlide;
     DcMotor horizontalSlide;
     HardwareMap hardwareMap;
+    GoBildaPinpointDriver pinpoint;
 
     final private LinkedBlockingQueue<DriveServiceInput> inputQueue;
 
     private Boolean isOnlyWheels;
+
+    // Constants for FTCLib Kinematics, double check at some point
+    // 23 cm wide 30 cm long
+    final Translation2d motorFLLocation = new Translation2d(-0.115, 0.15);
+    final Translation2d motorFRLocation = new Translation2d(0.115, 0.15);
+    final Translation2d motorBLLocation = new Translation2d(-0.115, -0.15);
+    final Translation2d motorBRLocation = new Translation2d(0.115, -0.15);
+
+    final double MAX_SPEED = 10.0; // m/sec
+
+    MecanumDriveKinematics kinematics = new MecanumDriveKinematics(
+            motorFLLocation,
+            motorFRLocation,
+            motorBLLocation,
+            motorBRLocation
+    );
 
     public DriveService(HardwareMap hardwareMap, LinkedBlockingQueue<DriveServiceInput> inputQueue, Boolean isOnlyWheels) {
         this.hardwareMap = hardwareMap;
@@ -31,6 +57,7 @@ public class DriveService implements Runnable {
         motorFR = hardwareMap.get(DcMotor.class, "motorFR");
         motorBL = hardwareMap.get(DcMotor.class, "motorBL");
         motorBR = hardwareMap.get(DcMotor.class, "motorBR");
+        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
 
 //        motorFR.setDirection(DcMotorSimple.Direction.REVERSE);
         motorFL.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -75,13 +102,23 @@ public class DriveService implements Runnable {
                         motorBL.setPower(0.0);
                         motorBR.setPower(0.0);
                     } else if (input.mode == DriveServiceInput.DriveServiceInputMode.PLAN) {
+                        Log.i("DriveService", "Control: " + Arrays.toString(input.control));
                         double posControl = input.control[0];
                         double rotControl = input.control[1];
 
-                        motorFL.setPower(posControl + rotControl);
-                        motorFR.setPower(posControl - rotControl);
-                        motorBL.setPower(posControl + rotControl);
-                        motorBR.setPower(posControl - rotControl);
+                        ChassisSpeeds chassisSpeeds = new ChassisSpeeds(
+                                posControl * Math.cos(pinpoint.getHeading(AngleUnit.RADIANS)),
+                                posControl * Math.sin(pinpoint.getHeading(AngleUnit.RADIANS)),
+                                rotControl
+                        );
+
+                        MecanumDriveWheelSpeeds wheelspeeds = kinematics.toWheelSpeeds(chassisSpeeds);
+
+
+                        motorFL.setPower(wheelspeeds.frontLeftMetersPerSecond * 10);
+                        motorFR.setPower(wheelspeeds.frontRightMetersPerSecond * 10);
+                        motorBL.setPower(wheelspeeds.rearLeftMetersPerSecond * 10);
+                        motorBR.setPower(wheelspeeds.rearRightMetersPerSecond * 10);
                     }
                 }
             }

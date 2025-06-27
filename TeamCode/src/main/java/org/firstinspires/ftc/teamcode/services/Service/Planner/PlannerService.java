@@ -200,6 +200,7 @@ public class PlannerService implements Runnable {
 
             time += 0.1;
         }
+//        Log.i("PlannerService.predictTrajectory", Arrays.deepToString(trajectory));
 
         return trajectory;
     }
@@ -260,7 +261,7 @@ public class PlannerService implements Runnable {
             double[] control = controlAndTrajectory.first;
             double[][] trajectory = controlAndTrajectory.second;
 
-            DriveServiceInput driveInput = new DriveServiceInput();
+            driveServiceInputQueue.add(new DriveServiceInput(control));
 
         }
     }
