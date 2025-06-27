@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.services.Service.Planner;
 
 
+import android.util.Log;
 import android.util.Pair;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -53,7 +54,10 @@ public class PlannerService implements Runnable {
     final private double ROBOT_LENGTH = 0.16; // BOTH IN METERS
     final private double ROBOT_WIDTH = 0.16; // TODO: GET THE CORRECT MEASUREMENTS, OTHERWISE WE WILL CRASH INTO OBSTACLES AND WE WILL BE SAD
 
-    private ArrayList<double[]> obstacles = new ArrayList<>();
+    private ArrayList<double[]> obstacles = new ArrayList<>(Arrays.asList(
+            new double[] { 0.5, 0.5 },
+            new double[] { 0.5, 3.5 }
+    ));
 
     private Pose2D goal = new Pose2D(DistanceUnit.METER, 0.5, 0.5, AngleUnit.RADIANS, 0.0);
     private boolean goalActive = true;
@@ -166,7 +170,7 @@ public class PlannerService implements Runnable {
                         rotateRelativeObstacleX >= -halfRobotLength &&
                         rotateRelativeObstacleY >= -halfRobotWidth
                 ) {
-                    return Double.POSITIVE_INFINITY; // Uh oh stinky, we collided
+                    return Double.POSITIVE_INFINITY; // Uh oh stinky, we collided, so tell them this costs ten morbillion units
                 }
             }
         }
@@ -204,13 +208,16 @@ public class PlannerService implements Runnable {
     }
 
     double[][] hypot2DArray(double[][] x, double[][] y) {
-        // Better not be empty, or it'll crash
-        assert x.length <= 1;
-        assert x[0].length <= 1;
-
-        // Better be the same dimensions
-        assert x.length == y.length;
-        assert x[0].length == y[0].length;
+        // Better not be empty or have differing dimensions
+        if (
+                x.length > 1 || x[0].length > 1 ||
+                x.length != y.length || x[0].length == y[0].length
+        ) {
+            Log.e("PlannerService.hypot2DArray",
+                    "WRONG INPUT YOU STAIN, x = " + x.length + " x[0] = " + x.length + " y = " + y.length + " y[0] = " + y[0].length
+            );
+            return x;
+        }
 
         double[][] result = new double[x.length][x[0].length];
 
