@@ -127,15 +127,23 @@ public class PlannerService implements Runnable {
     }
 
     double calcObstacleCost(double[][] trajectory) {
-        double[] ox = getColumn(obstacles, 0);
-        double[] oy = getColumn(obstacles, 1);
+        double rMin = Double.POSITIVE_INFINITY;
 
-        double[][] dx = subtractArrays(getColumn(trajectory, 0),  ox);
-        double[][] dy = subtractArrays(getColumn(trajectory, 1), oy);
+        for (int i = 0; i < obstacles.size(); i++) {
+            double ox = obstacles.get(i)[0];
+            double oy = obstacles.get(i)[1];
 
-        double[][] r = hypot2DArray(dx, dy);
+            for (int j = 0; j < trajectory.length; j++) {
+                double r = Math.hypot(
+                        trajectory[j][0] - ox,
+                        trajectory[j][1] - oy
+                );
 
-        // Do yucky matrix-based bounds checking D:
+                if (rMin > r) {
+                    rMin = r;
+                }
+            }
+        }
 
         double halfRobotLength = ROBOT_LENGTH / 2.0;
         double halfRobotWidth = ROBOT_WIDTH / 2.0;
@@ -175,60 +183,7 @@ public class PlannerService implements Runnable {
             }
         }
 
-        // Finish horrid bounds checking :D
-
-        OptionalDouble rMinOptional = DoubleStream.of(r[0]).min();
-
-        assert rMinOptional.isPresent();
-
-        double rMin = rMinOptional.getAsDouble();
-
         return 1.0 / rMin;
-    }
-
-    double[] getColumn(double[][] src, int index) {
-        return Arrays.stream(src).mapToDouble(doubles -> doubles[index]).toArray();
-    }
-
-    double[] getColumn(ArrayList<double[]> src, int index) {
-        return src.stream().mapToDouble(doubles -> doubles[index]).toArray();
-    }
-
-    // Waow
-    double[][] subtractArrays(double[] src1, double[] src2) {
-        double[][] result = new double[src1.length][src2.length];
-
-        for (int i = 0; i < src1.length; i++) {
-            for (int j = 0; j < src2.length; j++) {
-                result[i][j] = src1[i] - src2[j];
-            }
-        }
-
-        return result;
-    }
-
-    double[][] hypot2DArray(double[][] x, double[][] y) {
-        // Better not be empty or have differing dimensions
-        if (
-                x.length > 1 || x[0].length > 1 ||
-                x.length != y.length || x[0].length == y[0].length
-        ) {
-            Log.e("PlannerService.hypot2DArray",
-                    "WRONG INPUT YOU STAIN, x = " + x.length + " x[0] = " + x.length + " y = " + y.length + " y[0] = " + y[0].length
-            );
-            return x;
-        }
-
-        double[][] result = new double[x.length][x[0].length];
-
-        for (int i = 0; i < x.length; i++) {
-            for (int j = 0; j < x[0].length; j++) {
-                // Set the result in the corresponding slot to the hypotenuse of the corresponding x and y :D
-                result[i][j] = Math.hypot(x[i][j], y[i][j]);
-            }
-        }
-
-        return result;
     }
 
 
