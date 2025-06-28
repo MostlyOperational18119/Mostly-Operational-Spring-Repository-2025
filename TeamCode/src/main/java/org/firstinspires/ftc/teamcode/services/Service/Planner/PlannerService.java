@@ -265,10 +265,14 @@ public class PlannerService implements Runnable {
 
             if (!goalActive) continue;
 
+            pinpoint.update();
+
             double[] state = new double[] {
                     pinpoint.getPosX(DistanceUnit.METER), pinpoint.getPosY(DistanceUnit.METER), pinpoint.getHeading(AngleUnit.RADIANS),
                     Math.hypot(pinpoint.getVelX(DistanceUnit.METER), pinpoint.getPosY(DistanceUnit.METER)), pinpoint.getHeadingVelocity(UnnormalizedAngleUnit.RADIANS)
             };
+
+            Log.i("PlannerService", "State: " + Arrays.toString(state));
 
             double[] dynamicWindow = dynamicWindow(state);
             Pair<double[], double[][]> controlAndTrajectory = calcControlAndTrajectory(state, dynamicWindow, goal);
