@@ -115,10 +115,10 @@ public class DriveService implements Runnable {
                         MecanumDriveWheelSpeeds wheelspeeds = kinematics.toWheelSpeeds(chassisSpeeds);
 
 
-                        motorFL.setPower(wheelspeeds.frontLeftMetersPerSecond * 10);
-                        motorFR.setPower(wheelspeeds.frontRightMetersPerSecond * 10);
-                        motorBL.setPower(wheelspeeds.rearLeftMetersPerSecond * 10);
-                        motorBR.setPower(wheelspeeds.rearRightMetersPerSecond * 10);
+                        motorFL.setPower(wheelspeeds.frontLeftMetersPerSecond * 20);
+                        motorFR.setPower(wheelspeeds.frontRightMetersPerSecond * 20);
+                        motorBL.setPower(wheelspeeds.rearLeftMetersPerSecond * 20);
+                        motorBR.setPower(wheelspeeds.rearRightMetersPerSecond * 20);
                     }
                 }
             }

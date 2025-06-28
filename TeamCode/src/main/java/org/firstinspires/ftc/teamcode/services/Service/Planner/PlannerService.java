@@ -45,18 +45,30 @@ public class PlannerService implements Runnable {
     // State is [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)]
 
     // Kinematics constants
-    final private double MAX_LINEAR_VELOCITY = 0.5;
-    final private double MAX_ANGULAR_VELOCITY = Math.toRadians(20.0);
+    final private double MAX_LINEAR_VELOCITY = 1.0;
+    final private double MAX_ANGULAR_VELOCITY = Math.toRadians(40.0);
     final private double MAX_LINEAR_ACCELERATION = 0.2;
-    final private double MAX_ANGULAR_ACCELERATION = Math.toRadians(50.0);
+    final private double MAX_ANGULAR_ACCELERATION = Math.toRadians(40.0);
     final private double VELOCITY_RESOLUTION = 0.01;
-    final private double ANGULAR_VELOCITY_RESOLUTION = Math.toRadians(1.0);
+    final private double ANGULAR_VELOCITY_RESOLUTION = Math.toRadians(0.1);
     final private double ROBOT_LENGTH = 0.16; // BOTH IN METERS
     final private double ROBOT_WIDTH = 0.16; // TODO: GET THE CORRECT MEASUREMENTS, OTHERWISE WE WILL CRASH INTO OBSTACLES AND WE WILL BE SAD
 
-    private ArrayList<double[]> obstacles = new ArrayList<>(Arrays.asList(
-            new double[] { 0.5, 0.5 },
-            new double[] { 0.5, 3.5 }
+    public static ArrayList<double[]> obstacles = new ArrayList<>(Arrays.asList(
+            new double[]{-1.0, -1.0},
+            new double[]{0.0, 2.0},
+            new double[]{4.0, 2.0},
+            new double[]{5.0, 4.0},
+            new double[]{5.0, 5.0},
+            new double[]{5.0, 6.0},
+            new double[]{8.0, 9.0},
+            new double[]{7.0, 9.0},
+            new double[]{8.0, 10.0},
+            new double[]{9.0, 11.0},
+            new double[]{12.0, 13.0},
+            new double[]{12.0, 12.0},
+            new double[]{15.0, 15.0},
+            new double[]{13.0, 13.0}
     ));
 
     private Pose2D goal = new Pose2D(DistanceUnit.METER, 0.5, 0.5, AngleUnit.RADIANS, 0.0);
@@ -65,18 +77,18 @@ public class PlannerService implements Runnable {
     // DWA Methods
 
     private double[] dynamicWindow(double[] state) {
-        double[] Vs = new double[] {
+        double[] Vs = new double[]{
                 0.0, MAX_LINEAR_VELOCITY,
                 -MAX_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY
         };
-        double[] Vd = new double[] {
-                state[3] - MAX_LINEAR_VELOCITY * 0.1,
-                state[3] + MAX_LINEAR_VELOCITY * 0.1,
-                state[4] - MAX_ANGULAR_VELOCITY * 0.1,
-                state[4] + MAX_ANGULAR_VELOCITY * 0.1,
+        double[] Vd = new double[]{
+                state[3] - MAX_LINEAR_ACCELERATION * 0.1,
+                state[3] + MAX_LINEAR_ACCELERATION * 0.1,
+                state[4] - MAX_ANGULAR_ACCELERATION * 0.1,
+                state[4] + MAX_ANGULAR_ACCELERATION * 0.1,
         };
 
-        return new double[] {
+        return new double[]{
                 Math.max(Vs[0], Vd[0]), Math.min(Vs[1], Vd[1]),
                 Math.max(Vs[2], Vd[2]), Math.min(Vs[3], Vd[3])
         };
@@ -205,15 +217,17 @@ public class PlannerService implements Runnable {
         return trajectory;
     }
 
-    // This better not be incorrect or I will scream
+    // This was incorrect, I screamed
     double[] motionModel(double[] state, double[] u) {
-        state[2] += u[1] * 0.1;
-        state[0] += u[0] * Math.cos(state[2]) * 0.1;
-        state[1] += u[0] * Math.cos(state[2]) * 0.1;
-        state[3] = u[0];
-        state[4] = u[1];
+        double[] newState = state.clone();
 
-        return state;
+        newState[2] += u[1] * 0.1;
+        newState[0] += u[0] * Math.cos(state[2]) * 0.1;
+        newState[1] += u[0] * Math.sin(state[2]) * 0.1;
+        newState[3] = u[0];
+        newState[4] = u[1];
+
+        return newState;
     }
 
     public PlannerService(HardwareMap hardwareMap, LinkedBlockingQueue<VisionServiceOutput> visionServiceOutputQueue, LinkedBlockingQueue<DriveServiceInput> driveServiceInputQueue) {
@@ -259,7 +273,6 @@ public class PlannerService implements Runnable {
             double[] dynamicWindow = dynamicWindow(state);
             Pair<double[], double[][]> controlAndTrajectory = calcControlAndTrajectory(state, dynamicWindow, goal);
             double[] control = controlAndTrajectory.first;
-            double[][] trajectory = controlAndTrajectory.second;
 
             driveServiceInputQueue.add(new DriveServiceInput(control));
 
