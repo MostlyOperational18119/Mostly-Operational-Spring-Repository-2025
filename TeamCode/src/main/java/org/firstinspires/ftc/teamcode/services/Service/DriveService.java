@@ -103,33 +103,34 @@ public class DriveService implements Runnable {
                         motorBR.setPower(0.0);
                     } else if (input.mode == DriveServiceInput.DriveServiceInputMode.PLAN) {
                         Log.i("DriveService", "Control: " + Arrays.toString(input.control));
-                        double posControl = input.control[0];
-                        double rotControl = input.control[1];
+                        double posControlX = input.control[0];
+                        double posControlY = input.control[1];
+                        double rotControl = input.control[2];
 
                         pinpoint.update();
 
                         ChassisSpeeds chassisSpeeds = new ChassisSpeeds(
-                                posControl * Math.cos(pinpoint.getHeading(AngleUnit.RADIANS)),
-                                posControl * Math.sin(pinpoint.getHeading(AngleUnit.RADIANS)),
+                                posControlX,
+                                posControlY,
                                 rotControl
                         );
 
                         MecanumDriveWheelSpeeds wheelspeeds = kinematics.toWheelSpeeds(chassisSpeeds);
 
 
-                        motorFL.setPower(wheelspeeds.frontLeftMetersPerSecond * 40);
-                        motorFR.setPower(wheelspeeds.frontRightMetersPerSecond * 40);
-                        motorBL.setPower(wheelspeeds.rearLeftMetersPerSecond * 40);
-                        motorBR.setPower(wheelspeeds.rearRightMetersPerSecond * 40);
+                        motorFL.setPower(wheelspeeds.frontLeftMetersPerSecond * 20);
+                        motorFR.setPower(wheelspeeds.frontRightMetersPerSecond * 20);
+                        motorBL.setPower(wheelspeeds.rearLeftMetersPerSecond * 20);
+                        motorBR.setPower(wheelspeeds.rearRightMetersPerSecond * 20);
 
                         Log.i(
                                 "DriveService",
                                 String.format(
                                         "FL(%.2f) FR(%.2f) BL(%.2f) BR(%.2f)",
-                                        wheelspeeds.frontLeftMetersPerSecond*40,
-                                        wheelspeeds.frontRightMetersPerSecond*40,
-                                        wheelspeeds.rearLeftMetersPerSecond*40,
-                                        wheelspeeds.rearRightMetersPerSecond*40
+                                        wheelspeeds.frontLeftMetersPerSecond*20,
+                                        wheelspeeds.frontRightMetersPerSecond*20,
+                                        wheelspeeds.rearLeftMetersPerSecond*20,
+                                        wheelspeeds.rearRightMetersPerSecond*20
                                 )
                         );
                     }
