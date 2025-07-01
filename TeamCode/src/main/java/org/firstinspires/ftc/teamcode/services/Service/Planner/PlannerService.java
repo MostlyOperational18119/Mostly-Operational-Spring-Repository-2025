@@ -12,9 +12,14 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.robotcore.external.navigation.UnnormalizedAngleUnit;
 import org.firstinspires.ftc.teamcode.GoBildaPinpointDriver;
+import org.firstinspires.ftc.teamcode.proto.TrajectoryVisualizationDataProtobuf;
 import org.firstinspires.ftc.teamcode.services.Communication.DriveServiceInput;
 import org.firstinspires.ftc.teamcode.services.Communication.VisionServiceOutput;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -284,64 +289,74 @@ public class PlannerService implements Runnable {
 
     @Override
     public void run() {
-        FtcDashboard dashboard = FtcDashboard.getInstance();
-        TelemetryPacket packet = new TelemetryPacket();
         double[] state;
         this.behaviorScript.setHasScoringElement(true);
         Log.i("PlannerService", String.format("Starting planner with goal at (%.3f, %.3f) meters%n", goal.getX(DistanceUnit.METER), goal.getY(DistanceUnit.METER)));
 
-        while (true) {
-            pinpoint.update();
+        try (ServerSocket serverSocket = new ServerSocket(6888)) { // Idc, just use an unused port
+            Socket socket = serverSocket.accept();
+            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
-            try {
-                Thread.sleep((long) (DT * 1000));
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
-            }
+            while (true) {
+                pinpoint.update();
 
-            // GoBilda is fat, ugly, and stupid so their "Y-axis" is our X-axis and vice versa
-            state = new double[] {
-                    -pinpoint.getPosY(DistanceUnit.METER), pinpoint.getPosX(DistanceUnit.METER), pinpoint.getHeading(UnnormalizedAngleUnit.RADIANS),
-                    pinpoint.getVelY(DistanceUnit.METER), pinpoint.getVelX(DistanceUnit.METER), pinpoint.getHeadingVelocity(UnnormalizedAngleUnit.RADIANS)
-            };
+                try {
+                    Thread.sleep((long) (DT * 1000));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
 
-            packet.put("x", state[0]);
-            packet.put("y", state[1]);
-            packet.put("yaw", state[2]);
-            packet.put("vx", state[3]);
-            packet.put("vy", state[4]);
-            packet.put("omega", state[5]);
+                // GoBilda is fat, ugly, and stupid so their "Y-axis" is our X-axis and vice versa
+                state = new double[]{
+                        -pinpoint.getPosY(DistanceUnit.METER), pinpoint.getPosX(DistanceUnit.METER), pinpoint.getHeading(UnnormalizedAngleUnit.RADIANS),
+                        pinpoint.getVelY(DistanceUnit.METER), pinpoint.getVelX(DistanceUnit.METER), pinpoint.getHeadingVelocity(UnnormalizedAngleUnit.RADIANS)
+                };
 
-            dashboard.sendTelemetryPacket(packet);
 
 //            Log.i("PlannerService", String.format("New state: %s", Arrays.toString(state)));
 
-            Log.i("PlannerService", "Angle: " + pinpoint.getHeading(AngleUnit.RADIANS));
-            // ... (vision processing is unchanged) ...
+                Log.i("PlannerService", "Angle: " + pinpoint.getHeading(AngleUnit.RADIANS));
+                // ... (vision processing is unchanged) ...
 
-            if (!goalActive) {
-                Pair<Pose2D, Optional<Function<LinkedBlockingQueue<DriveServiceInput>, Void>>> behaviorGoalPair =
-                        behaviorScript.getGoal(fieldNodes, state, alliance);
-                goal = behaviorGoalPair.getKey();
-                goalActive = true;
+                if (!goalActive) {
+                    Pair<Pose2D, Optional<Function<LinkedBlockingQueue<DriveServiceInput>, Void>>> behaviorGoalPair =
+                            behaviorScript.getGoal(fieldNodes, state, alliance);
+                    goal = behaviorGoalPair.getKey();
+                    goalActive = true;
+                }
+
+                if (isGoalReached(state)) {
+                    Log.i("PlannerService", String.format("Goal reached! Robot at (%.3f, %.3f), goal at (%.3f, %.3f)%n",
+                            state[0], state[1], goal.getX(DistanceUnit.METER), goal.getY(DistanceUnit.METER)));
+                    driveServiceInputQueue.add(new DriveServiceInput(new double[]{0.0, 0.0, 0.0}));
+                    goalActive = false;
+                    Log.i("PlannerService", "Goal deactivated, waiting for new goal.");
+                    continue; // Skip planning until a new goal is set
+                }
+
+                state[2] = normalizeAngle(state[2]);
+                double[] dynamicWindow = dynamicWindow(state);
+                Pair<Pair<double[], double[][]>, TrajectoryVisualizationData> result = calcControlAndTrajectoryWithVisualization(state, dynamicWindow, goal);
+                double[] control = result.getKey().getKey();
+
+                TrajectoryVisualizationDataProtobuf.TrajectoryVisualizationData protobufData =
+                        TrajectoryDataConverter.serialize(result.getValue());
+
+                byte[] sendData = protobufData.toByteArray();
+
+                if (socket.isConnected()) {
+                    System.out.println("Length: " + sendData.length);
+
+                    out.writeInt(sendData.length);
+                    out.write(sendData);
+                    out.flush();
+                }
+
+                driveServiceInputQueue.add(new DriveServiceInput(control));
             }
-
-            if (isGoalReached(state)) {
-                Log.i("PlannerService", String.format("Goal reached! Robot at (%.3f, %.3f), goal at (%.3f, %.3f)%n",
-                        state[0], state[1], goal.getX(DistanceUnit.METER), goal.getY(DistanceUnit.METER)));
-                driveServiceInputQueue.add(new DriveServiceInput(new double[]{0.0, 0.0, 0.0}));
-                goalActive = false;
-                Log.i("PlannerService", "Goal deactivated, waiting for new goal.");
-                continue; // Skip planning until a new goal is set
-            }
-
-            state[2] = normalizeAngle(state[2]);
-            double[] dynamicWindow = dynamicWindow(state);
-            Pair<double[], double[][]> result = calcControlAndTrajectory(state, dynamicWindow, goal);
-            double[] control = result.getKey();
-
-            driveServiceInputQueue.add(new DriveServiceInput(control));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }

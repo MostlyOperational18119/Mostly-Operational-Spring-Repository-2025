@@ -107,8 +107,6 @@ public class DriveService implements Runnable {
                         double posControlY = input.control[1];
                         double rotControl = input.control[2];
 
-                        pinpoint.update();
-
                         ChassisSpeeds chassisSpeeds = new ChassisSpeeds(
                                 posControlX,
                                 posControlY,
