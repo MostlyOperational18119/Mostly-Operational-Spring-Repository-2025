@@ -11,6 +11,9 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.GoBildaPinpointDriver;
+
 import java.util.Arrays;
 import java.util.Locale;
 
@@ -41,6 +44,14 @@ public class FirstJavaTeleOp extends LinearOpMode {
         horizontalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         Limelight3A limelight = hardwareMap.get(Limelight3A.class, "limelight");
+
+        GoBildaPinpointDriver pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
+
+        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+        pinpoint.setOffsets(-170, 0, DistanceUnit.MM);
+        pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
+
+        pinpoint.resetPosAndIMU();
 
         Servo inRotation = hardwareMap.servo.get("InRotation");
         inRotation.setPosition(0.81);
@@ -86,6 +97,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
         limelight.start();
 
         while (opModeIsActive()) {
+            pinpoint.update();
 
             driverLeftX = gamepad1.left_stick_x;
             driverLeftY = -gamepad1.left_stick_y;
@@ -182,6 +194,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
             telemetry.addData("Right X: ", gamepad1.right_stick_x);
             telemetry.addData("Limelight Output: ", Arrays.toString(out));
             telemetry.addData("Limelight Status: ", status.toString());
+            telemetry.addData("Pinpoint Pose: ", pinpoint.getPosition());
             telemetry.update();
         }
     }

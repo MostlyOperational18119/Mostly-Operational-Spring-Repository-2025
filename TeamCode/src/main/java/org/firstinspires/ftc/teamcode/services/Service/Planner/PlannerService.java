@@ -41,7 +41,7 @@ public class PlannerService implements Runnable {
     final private double GOAL_TOLERANCE = 0.1;
 
     // Kinematics and Simulation Constants
-    final private double MAX_LINEAR_VELOCITY = 1.0; // m/s
+    final public static double MAX_LINEAR_VELOCITY = 1.0; // m/s
     final private double MAX_ANGULAR_VELOCITY = Math.toRadians(40.0); // rad/s
     final private double MAX_LINEAR_ACCELERATION = 0.2; // m/s²
     final private double MAX_ANGULAR_ACCELERATION = Math.toRadians(40.0); // rad/s²
@@ -275,7 +275,7 @@ public class PlannerService implements Runnable {
 
         // Setup pinpoint
         pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
-        pinpoint.setOffsets(70, -180, DistanceUnit.MM);
+        pinpoint.setOffsets(-170, 0, DistanceUnit.MM);
         pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
 
         pinpoint.resetPosAndIMU();
@@ -293,10 +293,12 @@ public class PlannerService implements Runnable {
         this.behaviorScript.setHasScoringElement(true);
         Log.i("PlannerService", String.format("Starting planner with goal at (%.3f, %.3f) meters%n", goal.getX(DistanceUnit.METER), goal.getY(DistanceUnit.METER)));
 
+        // Set starting position
+        pinpoint.setPosY(0.6096, DistanceUnit.METER);
+
         try (ServerSocket serverSocket = new ServerSocket(6888)) { // Idc, just use an unused port
             Socket socket = serverSocket.accept();
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-
             while (true) {
                 pinpoint.update();
 
@@ -309,7 +311,7 @@ public class PlannerService implements Runnable {
 
                 // GoBilda is fat, ugly, and stupid so their "Y-axis" is our X-axis and vice versa
                 state = new double[]{
-                        -pinpoint.getPosY(DistanceUnit.METER), pinpoint.getPosX(DistanceUnit.METER), pinpoint.getHeading(UnnormalizedAngleUnit.RADIANS),
+                        pinpoint.getPosY(DistanceUnit.METER), pinpoint.getPosX(DistanceUnit.METER), pinpoint.getHeading(UnnormalizedAngleUnit.RADIANS),
                         pinpoint.getVelY(DistanceUnit.METER), pinpoint.getVelX(DistanceUnit.METER), pinpoint.getHeadingVelocity(UnnormalizedAngleUnit.RADIANS)
                 };
 
