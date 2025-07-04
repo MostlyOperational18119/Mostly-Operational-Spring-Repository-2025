@@ -8,28 +8,30 @@ public class AutoTransfer {
     private enum State {
         IDLE,
         RETRACT_HOR_SLIDE,
-        CLOSE_CLAW,
-        WAIT_AFTER_CLAW,
-        LIFT_SLIDE,
-        WAIT_AFTER_LIFT,
-        ROTATE_ARM,
+        RETRACT_VERT_SLIDE,
+        CLOSE_OUT_CLAW,
+        LIFT_VERT_SLIDE,
+        ROTATE_OUT_ARM,
         DONE
     }
 
     private State currentState = State.IDLE;
     private long stateStartTime;
 
-    private final Servo claw;
-    private final DcMotor slide;
-    private final Servo arm;
+    private final Servo outClaw;
+    private final DcMotor verticalSlide;
+    private final DcMotor horizontalSlide;
+    private final Servo outRotation;
 
     public AutoTransfer(HardwareMap hardwareMap) {
-        claw = hardwareMap.get(Servo.class, "OutClaw");
-        slide = hardwareMap.get(DcMotor.class, "verticalSlide");
-        arm = hardwareMap.get(Servo.class, "OutRotation");
-        slide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        slide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
+        outClaw = hardwareMap.get(Servo.class, "OutClaw");
+        verticalSlide = hardwareMap.get(DcMotor.class, "verticalSlide");
+        horizontalSlide = hardwareMap.get(DcMotor.class, "horizontalSlide");
+        outRotation = hardwareMap.get(Servo.class, "OutRotation");
+        verticalSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        verticalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        horizontalSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        horizontalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
     public void startTransfer() {
@@ -44,27 +46,42 @@ public class AutoTransfer {
 
         switch (currentState) {
             case RETRACT_HOR_SLIDE:
-
-            case CLOSE_CLAW:
-                claw.setPosition(0.35);
-                if (elapsed > 300) {
-                    currentState = State.LIFT_SLIDE;
-                    stateStartTime = System.currentTimeMillis();
-                }
-                break;
-
-            case LIFT_SLIDE:
-                slide.setTargetPosition(800); // set your target height
-                slide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                slide.setPower(1.0);
+                horizontalSlide.setTargetPosition(0);
+                horizontalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                horizontalSlide.setPower(0.5);
                 if (elapsed > 500) {
-                    currentState = State.ROTATE_ARM;
+                    currentState = State.RETRACT_VERT_SLIDE;
+                    stateStartTime = System.currentTimeMillis();
+                }
+                break;
+            case RETRACT_VERT_SLIDE:
+                verticalSlide.setTargetPosition(0);
+                verticalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                verticalSlide.setPower(0.5);
+                if (elapsed > 500) {
+                    currentState = State.CLOSE_OUT_CLAW;
+                    stateStartTime = System.currentTimeMillis();
+                }
+                break;
+            case CLOSE_OUT_CLAW:
+                outClaw.setPosition(0.35);
+                if (elapsed > 300) {
+                    currentState = State.LIFT_VERT_SLIDE;
+                    stateStartTime = System.currentTimeMillis();
+                }
+                break;
+            case LIFT_VERT_SLIDE:
+                verticalSlide.setTargetPosition(800); // set your target height
+                verticalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                verticalSlide.setPower(0.5);
+                if (elapsed > 500) {
+                    currentState = State.ROTATE_OUT_ARM;
                     stateStartTime = System.currentTimeMillis();
                 }
                 break;
 
-            case ROTATE_ARM:
-                arm.setPosition(0.5); // rotate to outtake position
+            case ROTATE_OUT_ARM:
+                outRotation.setPosition(0.5); // rotate to outtake position
                 currentState = State.DONE;
                 break;
 
