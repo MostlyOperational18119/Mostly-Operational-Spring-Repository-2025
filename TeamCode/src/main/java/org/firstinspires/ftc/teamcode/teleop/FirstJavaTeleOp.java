@@ -12,10 +12,46 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import java.util.Arrays;
-import java.util.Locale;
 
 @TeleOp(name = "First Java TeleOp")
 public class FirstJavaTeleOp extends LinearOpMode {
+    public void verticalSlideTo(DcMotorEx slide, Integer target) {
+        double P;
+        double D;
+        double feedforward;
+
+        double error = target - slide.getCurrentPosition();
+
+        if (slide.getCurrentPosition() > target) {
+            P = 0.004;
+            D = 0.0;
+            if (Math.abs(error) < 50) {
+                feedforward = 0.0;
+            } else {
+                feedforward = 0.11;
+            }
+        } else {
+            P = 0.03;
+            D = 0.0002;
+            feedforward = 0.0;
+        }
+
+        double derivative = -slide.getVelocity();
+        double verticalPower = P * (target - slide.getCurrentPosition()) + D * derivative;
+
+        slide.setPower(verticalPower + feedforward);
+    }
+
+    public void horizontalSlideTo(DcMotor slide, Integer target) {
+        slide.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        if (slide.getCurrentPosition() > target) {
+            slide.setPower(-0.2);
+        } else if (slide.getCurrentPosition() < target) {
+            slide.setPower(0.2);
+        } else {
+            slide.setPower(0);
+        }
+    }
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -29,7 +65,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
         motorBR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         DcMotor intakeMotor = hardwareMap.dcMotor.get("intakeMotor");
-        
+
         DcMotorEx verticalSlide = hardwareMap.get(DcMotorEx.class, "verticalSlide");
         verticalSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         verticalSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -53,30 +89,23 @@ public class FirstJavaTeleOp extends LinearOpMode {
         Gamepad gunnerCurrent = gamepad2;
         Gamepad gunnerPrevious = gamepad2;
 
+        AutoTransfer transfer = new AutoTransfer(hardwareMap);
+
         float driverLeftX;
         float driverLeftY;
         float driverRightX;
 
-        float gunnerRightY;
         float gunnerLeftY;
         float gunnerRightTrigger;
         float gunnerLeftTrigger;
-        boolean gunnerRightDown;
-        boolean gunnerLeftDown;
         boolean gunnerDown;
         boolean gunnerUp;
-        boolean gunnerRightBumper;
-        boolean gunnerLeftBumper;
-
-        boolean lastGunnerRightBumper = false;
-        boolean lastGunnerLeftBumper = false;
+        boolean gunnerLB;
 
         double speedDiv = 1.0;
         int vertTarget = 0;
-        double P;
-        double D;
-        double feedforward;
-        int vertTop = 500;
+        int horizontalTarget = 0;
+        boolean horizontalIsManual = true;
 
         telemetry.addLine("Init done");
         telemetry.update();
@@ -91,12 +120,10 @@ public class FirstJavaTeleOp extends LinearOpMode {
             driverLeftY = -gamepad1.left_stick_y;
             driverRightX = gamepad1.right_stick_x;
 
-            gunnerRightY = -gamepad2.right_stick_y;
             gunnerLeftY = gamepad2.left_stick_y;
             gunnerDown = gamepad2.dpad_down;
             gunnerUp = gamepad2.dpad_up;
-            gunnerRightBumper = gamepad2.right_bumper;
-            gunnerLeftBumper = gamepad2.left_bumper;
+            gunnerLB = gamepad2.left_bumper;
             gunnerRightTrigger = gamepad2.right_trigger;
             gunnerLeftTrigger = gamepad2.left_trigger;
 
@@ -115,43 +142,31 @@ public class FirstJavaTeleOp extends LinearOpMode {
             motorBL.setPower(Math.atan(1.12*(driverLeftY - driverLeftX + driverRightX)) / speedDiv);
             motorBR.setPower(Math.atan(1.12*(driverLeftY + driverLeftX - driverRightX)) / speedDiv);
 
-            double error = vertTarget - verticalSlide.getCurrentPosition();
-
-            //adjusts the PD values when the slide is going down
-            if (verticalSlide.getCurrentPosition() > vertTarget) {
-                P = 0.004;
-                D = 0.0;
-                if (Math.abs(error) < 50) {
-                    feedforward = 0.0;
-                } else {
-                    feedforward = 0.11;
-                }
-            } else {
-                P = 0.03;
-                D = 0.0002;
-                feedforward = 0.0;
-            }
-
-            double derivative = -verticalSlide.getVelocity();
-            double verticalPower = P*error + D*derivative;
-
+            //vertical slide controls with dpad arrows
             if (gunnerDown) {
                 vertTarget = 0;
             } else if (gunnerUp) {
-                vertTarget = vertTop;
+                vertTarget = 1000;
             }
 
-            verticalSlide.setPower(verticalPower + feedforward);
+            verticalSlideTo(verticalSlide, vertTarget);
 
-            vertTarget = vertTarget + (int) (10*gunnerRightY);
-
-            if (gunnerLeftBumper && !lastGunnerLeftBumper) {
-                vertTop -= 250;
-            } else if (gunnerRightBumper && !lastGunnerRightBumper) {
-                vertTop += 250;
+            //horizontal slide controls?
+            if (gunnerLeftY != 0) {
+                horizontalIsManual = true;
+                horizontalSlide.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            } else if (gunnerLB) {
+                horizontalTarget = 500;
+                horizontalIsManual = false;
             }
 
-            horizontalSlide.setPower(gunnerLeftY);
+            if (horizontalIsManual) {
+                horizontalSlide.setPower(-gunnerLeftY);
+            }
+
+            if(!horizontalIsManual) {
+                horizontalSlideTo(horizontalSlide, horizontalTarget);
+            }
 
             if (gunnerRightTrigger > 0){
                 intakeMotor.setPower(gunnerRightTrigger);
@@ -159,8 +174,9 @@ public class FirstJavaTeleOp extends LinearOpMode {
                 intakeMotor.setPower(-gunnerLeftTrigger);
             }
 
-            lastGunnerLeftBumper = gunnerLeftBumper;
-            lastGunnerRightBumper = gunnerRightBumper;
+            /*if (gunnerCurrent.a && !gunnerPrevious.a && !transfer.isBusy()) {
+                transfer.startTransfer();
+            }*/
 
             driverPrevious.copy(driverCurrent);
             driverCurrent.copy(gamepad1);
@@ -168,12 +184,15 @@ public class FirstJavaTeleOp extends LinearOpMode {
             gunnerPrevious.copy(gunnerCurrent);
             gunnerCurrent.copy(gamepad2);
 
+            transfer.update();
+
             telemetry.addLine("Running");
-            telemetry.addData("vertical slide target pos: ", vertTarget);
-            telemetry.addData("error", error);
-            telemetry.addData("vertTop: ", vertTop);
-            telemetry.addData("vert speed: ", verticalSlide.getVelocity());
+            telemetry.addData("Transfer State", transfer.isBusy() ? "Running" : "Idle");
             telemetry.addData("vertical encoder: ", verticalSlide.getCurrentPosition());
+            telemetry.addData("horizontal encoder: ", horizontalSlide.getCurrentPosition());
+            telemetry.addData("horizontal manual mode: ", horizontalIsManual);
+            telemetry.addData("horizontal target: ", horizontalTarget);
+            telemetry.addData("gunnerLB: ", gunnerLB);
             telemetry.addData("Speed div: ", speedDiv);
             telemetry.addData("Motor FL: ", motorFL.getPower());
             telemetry.addData("Motor FR: ", motorFR.getPower());
