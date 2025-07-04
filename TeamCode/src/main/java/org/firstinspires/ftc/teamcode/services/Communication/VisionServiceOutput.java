@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.services.Communication;
 
-import com.acmerobotics.roadrunner.Pose2d;
-
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
@@ -22,9 +20,5 @@ public class VisionServiceOutput {
         this.pose2DFromRobot = pose2DFromRobot;
         this.pose3DFromRobot = pose3D;
         this.type = type;
-    }
-    
-    public Pose2d getRoadrunnerPoseFromRobot() {
-        return new Pose2d(pose2DFromRobot.getX(DistanceUnit.INCH), pose2DFromRobot.getY(DistanceUnit.INCH), pose2DFromRobot.getHeading(AngleUnit.RADIANS));
     }
 }

@@ -9,6 +9,9 @@ import org.firstinspires.ftc.teamcode.services.Communication.HeartbeatOutput;
 import org.firstinspires.ftc.teamcode.services.Communication.TeleOpServiceInput;
 import org.firstinspires.ftc.teamcode.services.Service.DriveService;
 import org.firstinspires.ftc.teamcode.services.Communication.DriveServiceInput;
+import org.firstinspires.ftc.teamcode.services.Service.Planner.Alliance;
+import org.firstinspires.ftc.teamcode.services.Service.Planner.FTC2024BehaviorScript;
+import org.firstinspires.ftc.teamcode.services.Service.Planner.FTC2024FieldConfig;
 import org.firstinspires.ftc.teamcode.services.Service.Planner.PlannerService;
 import org.firstinspires.ftc.teamcode.services.Service.TeleOpService;
 import org.firstinspires.ftc.teamcode.services.Service.VisionService;
@@ -50,7 +53,7 @@ public abstract class ServiceOpMode extends OpMode {
 
         this.driveService = new DriveService(hardwareMap, driveServiceInputQueue, true);
 //        this.visionService = new VisionService(hardwareMap, visionServiceInputQueue, visionServiceOutputQueue);
-        this.plannerService = new PlannerService(hardwareMap, visionServiceOutputQueue, driveServiceInputQueue);
+        this.plannerService = new PlannerService(hardwareMap, visionServiceOutputQueue, driveServiceInputQueue, new FTC2024FieldConfig(), new FTC2024BehaviorScript(), Alliance.RED);
         if (teleOp) {
             this.teleOpService = getService();
         }
@@ -91,6 +94,6 @@ public abstract class ServiceOpMode extends OpMode {
         if (driveServiceThread != null) driveServiceThread.interrupt();
         if (visionServiceThread != null) visionServiceThread.interrupt();
         if (plannerServiceThread != null) plannerServiceThread.interrupt();
-        if (isTeleOp()) teleOpServiceThread.interrupt();
+        if (isTeleOp() && teleOpServiceThread != null) teleOpServiceThread.interrupt();
     }
 }

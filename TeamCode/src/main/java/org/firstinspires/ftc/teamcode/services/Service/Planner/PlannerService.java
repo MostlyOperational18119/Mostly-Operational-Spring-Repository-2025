@@ -1,266 +1,364 @@
 package org.firstinspires.ftc.teamcode.services.Service.Planner;
 
+import android.util.Log;
 
-import android.util.Pair;
-
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.apache.commons.math4.legacy.linear.MatrixUtils;
-import org.apache.commons.math4.legacy.linear.RealMatrix;
+import org.apache.commons.math4.legacy.core.Pair;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+import org.firstinspires.ftc.robotcore.external.navigation.UnnormalizedAngleUnit;
 import org.firstinspires.ftc.teamcode.GoBildaPinpointDriver;
+import org.firstinspires.ftc.teamcode.proto.TrajectoryVisualizationDataProtobuf;
 import org.firstinspires.ftc.teamcode.services.Communication.DriveServiceInput;
 import org.firstinspires.ftc.teamcode.services.Communication.VisionServiceOutput;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.OptionalDouble;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.stream.DoubleStream;
-import java.util.stream.IntStream;
+import java.util.function.Function;
 
-
-// Heavily inspired by https://github.com/AtsushiSakai/PythonRobotics/blob/master/PathPlanning/DynamicWindowApproach/dynamic_window_approach.py
-// TODO: Ensure that I'm meeting the MIT license terms
 public class PlannerService implements Runnable {
     private LinkedBlockingQueue<VisionServiceOutput> visionServiceOutputQueue;
     private LinkedBlockingQueue<DriveServiceInput> driveServiceInputQueue;
+
+    // DWA Constants
+    final private double DISTANCE_COST_GAIN = 1.0;
+    final private double HEADING_COST_GAIN = 0.1;
+    final private double ORIENTATION_COST_GAIN = 0.2;
+    final private double SPEED_COST_GAIN = 0.5;
+    final private double OBSTACLE_COST_GAIN = 1.0;
+    final private double ROBOT_STUCK_FLAG = 0.01;
+    final private double GOAL_TOLERANCE = 0.1;
+
+    // Kinematics and Simulation Constants
+    final public static double MAX_LINEAR_VELOCITY = 1.0; // m/s
+    final private double MAX_ANGULAR_VELOCITY = Math.toRadians(40.0); // rad/s
+    final private double MAX_LINEAR_ACCELERATION = 0.2; // m/s²
+    final private double MAX_ANGULAR_ACCELERATION = Math.toRadians(40.0); // rad/s²
+    // FIX: Resolution must be smaller than acceleration * DT to sample the dynamic window properly.
+    final private double LINEAR_VELOCITY_RESOLUTION = 0.005; // m/s
+    final private double STRAFE_VELOCITY_RESOLUTION = 0.005; // m/s
+    final private double ANGULAR_VELOCITY_RESOLUTION = Math.toRadians(0.5); // rad/s
+    final private double ROBOT_LENGTH = 0.16; // meters
+    final private double ROBOT_WIDTH = 0.16; // meters
+    // FIX: Use a consistent time step for all physics calculations and the main loop.
+    final private double DT = 0.1; // seconds
+
+    // State: [x(m), y(m), yaw(rad), vx_robot(m/s), vy_robot(m/s), omega(rad/s)]
+    final private FieldConfig fieldConfig;
+    private ArrayList<FieldNode> fieldNodes = new ArrayList<>();
+    private Alliance alliance;
+
+    public Pose2D goal = new Pose2D(DistanceUnit.METER, 3.0, 3.0, AngleUnit.RADIANS, 0.0);
+    private boolean goalActive = true;
+    final private BehaviorScript behaviorScript;
+
     private GoBildaPinpointDriver pinpoint;
 
-    // DWA Variables
-
-    final private double TO_GOAL_COST_GAIN = 0.15;
-    final private double SPEED_COST_GAIN = 1.0;
-    final private double OBSTACLE_COST_GAIN = 1.0;
-
-    // DWA FUN FACTS
-    // State [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)]
-
-    // Kinematics constants
-    final private double MAX_LINEAR_VELOCITY = 0.5;
-    final private double MAX_ANGULAR_VELOCITY = Math.toRadians(20.0);
-    final private double MAX_LINEAR_ACCELERATION = 0.2;
-    final private double MAX_ANGULAR_ACCELERATION = Math.toRadians(50.0);
-    final private double VELOCITY_RESOLUTION = 0.01;
-    final private double ANGULAR_VELOCITY_RESOLUTION = Math.toRadians(1.0);
-
-    private ArrayList<double[]> obstacles = new ArrayList<>();
-
-    // DWA Methods
+    private boolean isGoalReached(double[] state) {
+        double goalX = goal.getX(DistanceUnit.METER);
+        double goalY = goal.getY(DistanceUnit.METER);
+        double distanceToGoal = Math.hypot(state[0] - goalX, state[1] - goalY);
+        return distanceToGoal <= GOAL_TOLERANCE;
+    }
 
     private double[] dynamicWindow(double[] state) {
-        double[] Vs = new double[] {
-                0.0, MAX_LINEAR_VELOCITY,
+        double[] Vs = new double[]{
+                -MAX_LINEAR_VELOCITY, MAX_LINEAR_VELOCITY,
+                -MAX_LINEAR_VELOCITY, MAX_LINEAR_VELOCITY,
                 -MAX_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY
         };
-        double[] Vd = new double[] {
-                state[3] - MAX_LINEAR_VELOCITY * 0.1,
-                state[3] + MAX_LINEAR_VELOCITY * 0.1,
-                state[4] - MAX_ANGULAR_VELOCITY * 0.1,
-                state[4] + MAX_ANGULAR_VELOCITY * 0.1,
+        double[] Vd = new double[]{
+                state[3] - MAX_LINEAR_ACCELERATION * DT,
+                state[3] + MAX_LINEAR_ACCELERATION * DT,
+                state[4] - MAX_LINEAR_ACCELERATION * DT,
+                state[4] + MAX_LINEAR_ACCELERATION * DT,
+                state[5] - MAX_ANGULAR_ACCELERATION * DT,
+                state[5] + MAX_ANGULAR_ACCELERATION * DT,
         };
 
-        return new double[] {
+        return new double[]{
                 Math.max(Vs[0], Vd[0]), Math.min(Vs[1], Vd[1]),
-                Math.max(Vs[2], Vd[2]), Math.min(Vs[3], Vd[3])
+                Math.max(Vs[2], Vd[2]), Math.min(Vs[3], Vd[3]),
+                Math.max(Vs[4], Vd[4]), Math.min(Vs[5], Vd[5])
         };
     }
 
-    private HardwareMap hardwareMap;
+    Pair<Pair<double[], double[][]>, TrajectoryVisualizationData> calcControlAndTrajectoryWithVisualization(double[] state, double[] dynWin, Pose2D goal) {
+        double minimumCost = Double.POSITIVE_INFINITY;
+        double[] bestU = new double[]{0.0, 0.0, 0.0};
+        double[][] bestTrajectory = new double[][]{state};
+        List<TrajectoryVisualizationData.EvaluatedTrajectory> allTrajectories = new ArrayList<>();
+
+        for (double vx = dynWin[0]; vx <= dynWin[1]; vx += LINEAR_VELOCITY_RESOLUTION) {
+            for (double vy = dynWin[2]; vy <= dynWin[3]; vy += STRAFE_VELOCITY_RESOLUTION) {
+                if (Math.hypot(vx, vy) > MAX_LINEAR_VELOCITY) {
+                    continue;
+                }
+                for (double omega = dynWin[4]; omega <= dynWin[5]; omega += ANGULAR_VELOCITY_RESOLUTION) {
+                    double[] u = {vx, vy, omega};
+                    double[][] trajectory = predictTrajectory(state, u);
+                    double[] finalState = trajectory[trajectory.length - 1];
+
+                    double distCost = DISTANCE_COST_GAIN * calcDistanceCost(finalState, goal);
+                    double headingCost = HEADING_COST_GAIN * calcHeadingCost(finalState, goal);
+                    double orientationCost = ORIENTATION_COST_GAIN * Math.abs(normalizeAngle(finalState[2] - goal.getHeading(AngleUnit.RADIANS)));
+                    double speedCost = SPEED_COST_GAIN * (MAX_LINEAR_VELOCITY - Math.hypot(vx, vy));
+                    double obCost = OBSTACLE_COST_GAIN * calcObstacleCost(trajectory);
+
+                    double finalCost = distCost + headingCost + orientationCost + speedCost + obCost;
+                    boolean isSelected = false;
+
+                    if (minimumCost > finalCost) { // Use > instead of >= to prefer earlier, lower-velocity solutions in case of cost ties
+                        minimumCost = finalCost;
+                        bestU = u;
+                        bestTrajectory = trajectory;
+                        isSelected = true;
+
+                        if (Math.hypot(vx, vy) < ROBOT_STUCK_FLAG && Math.hypot(state[3], state[4]) < ROBOT_STUCK_FLAG) {
+                            bestU[2] = -MAX_ANGULAR_VELOCITY;
+                        }
+                    }
+
+                    if (allTrajectories.size() < 200 || isSelected) {
+                        allTrajectories.add(new TrajectoryVisualizationData.EvaluatedTrajectory(trajectory, finalCost, isSelected));
+                    }
+                }
+            }
+        }
+
+        if (!allTrajectories.isEmpty()) {
+            for (int i = 0; i < allTrajectories.size(); i++) {
+                if (Arrays.deepEquals(allTrajectories.get(i).trajectory, bestTrajectory)) {
+                    allTrajectories.set(i, new TrajectoryVisualizationData.EvaluatedTrajectory(allTrajectories.get(i).trajectory, allTrajectories.get(i).cost, true));
+                    break;
+                }
+            }
+        }
+
+        TrajectoryVisualizationData visualizationData = new TrajectoryVisualizationData(allTrajectories, state);
+        return new Pair<>(new Pair<>(bestU, bestTrajectory), visualizationData);
+    }
 
     Pair<double[], double[][]> calcControlAndTrajectory(double[] state, double[] dynWin, Pose2D goal) {
         double minimumCost = Double.POSITIVE_INFINITY;
-        double[] bestU = new double[] { 0.0, 0.0 };
-        double[][] bestTrajectory = new double[][] { state };
+        double[] bestU = new double[]{0.0, 0.0, 0.0};
+        double[][] bestTrajectory = new double[][]{state};
 
-        for (double v = dynWin[0]; v <= dynWin[1]; v += VELOCITY_RESOLUTION) {
-            for (double y = dynWin[2]; y <= dynWin[3]; y += ANGULAR_VELOCITY_RESOLUTION) {
-                double[][] trajectory = predictTrajectory(state, v, y);
+        for (double vx = dynWin[0]; vx <= dynWin[1]; vx += LINEAR_VELOCITY_RESOLUTION) {
+            for (double vy = dynWin[2]; vy <= dynWin[3]; vy += STRAFE_VELOCITY_RESOLUTION) {
+                if (Math.hypot(vx, vy) > MAX_LINEAR_VELOCITY) {
+                    continue;
+                }
+                for (double omega = dynWin[4]; omega <= dynWin[5]; omega += ANGULAR_VELOCITY_RESOLUTION) {
+                    double[] u = {vx, vy, omega};
+                    double[][] trajectory = predictTrajectory(state, u);
+                    double[] finalState = trajectory[trajectory.length - 1];
 
-                double toGoalCost = TO_GOAL_COST_GAIN * calcToGoalCost(trajectory, goal);
-                double speedCost = SPEED_COST_GAIN * (MAX_LINEAR_VELOCITY - trajectory[trajectory.length - 1][3]);
-                double obCost = OBSTACLE_COST_GAIN * calcObstacleCost(trajectory);
+                    double distCost = DISTANCE_COST_GAIN * calcDistanceCost(finalState, goal);
+                    double headingCost = HEADING_COST_GAIN * calcHeadingCost(finalState, goal);
+                    double orientationCost = ORIENTATION_COST_GAIN * Math.abs(normalizeAngle(finalState[2] - goal.getHeading(AngleUnit.RADIANS)));
+                    double speedCost = SPEED_COST_GAIN * (MAX_LINEAR_VELOCITY - Math.hypot(vx, vy));
+                    double obCost = OBSTACLE_COST_GAIN * calcObstacleCost(trajectory);
 
-                double finalCost = toGoalCost + speedCost + obCost;
+                    double finalCost = distCost + headingCost + orientationCost + speedCost + obCost;
+                    boolean isSelected = false;
+
+                    if (minimumCost > finalCost) { // Use > instead of >= to prefer earlier, lower-velocity solutions in case of cost ties
+                        minimumCost = finalCost;
+                        bestU = u;
+                        bestTrajectory = trajectory;
+                        isSelected = true;
+
+                        if (Math.hypot(vx, vy) < ROBOT_STUCK_FLAG && Math.hypot(state[3], state[4]) < ROBOT_STUCK_FLAG) {
+                            bestU[2] = -MAX_ANGULAR_VELOCITY;
+                        }
+                    }
+                }
             }
-
         }
 
         return new Pair<>(bestU, bestTrajectory);
     }
 
-    double calcToGoalCost(double[][] trajectory, Pose2D goal) {
-        double dx = goal.getX(DistanceUnit.CM) - trajectory[trajectory.length - 1][0];
-        double dy = goal.getY(DistanceUnit.CM) - trajectory[trajectory.length - 1][1];
+    double calcDistanceCost(double[] finalState, Pose2D goal) {
+        return Math.hypot(finalState[0] - goal.getX(DistanceUnit.METER), finalState[1] - goal.getY(DistanceUnit.METER));
+    }
 
-        double errorAngle = Math.atan2(dy, dx);
-        double costAngle = errorAngle - trajectory[trajectory.length - 1][2];
-
-        // Le cost
-        return Math.abs(Math.atan2(Math.sin(costAngle), Math.cos(costAngle)));
+    double calcHeadingCost(double[] finalState, Pose2D goal) {
+        double dx = goal.getX(DistanceUnit.METER) - finalState[0];
+        double dy = goal.getY(DistanceUnit.METER) - finalState[1];
+        double angleToGoal = Math.atan2(dy, dx);
+        double costAngle = angleToGoal - finalState[2];
+        return Math.abs(normalizeAngle(costAngle));
     }
 
     double calcObstacleCost(double[][] trajectory) {
-        double[] ox = getColumn(obstacles, 0);
-        double[] oy = getColumn(obstacles, 1);
+        double minDistance = Double.POSITIVE_INFINITY;
+        final double safetyMargin = 0.5;
 
-        double[][] dx = subtractArrays(getColumn(trajectory, 0),  ox);
-        double[][] dy = subtractArrays(getColumn(trajectory, 1), oy);
-
-        double[][] r = hypot2DArray(dx, dy);
-
-        // Do yucky matrix-based bounds checking D:
-
-        double[] yaw = getColumn(trajectory, 2);
-
-        // Use streams (my beloved) to do cosine operations on arrays
-        double[][][] rotation = new double[][][] {
-                {
-                        Arrays.stream(yaw).map(Math::cos).toArray(),
-                        Arrays.stream(yaw).map(num -> -Math.sin(num)).toArray()
-                },
-                {
-                        Arrays.stream(yaw).map(Math::sin).toArray(),
-                        Arrays.stream(yaw).map(Math::cos).toArray()
-                }
-        };
-
-        rotation = transpose3DArray(rotation, new int[] {2, 0, 1});
-
-
-//        RealMatrix rotationMatrix = MatrixUtils.createRealMatrix(rotation);
-
-        // Finish horrid bounds checking :D
-
-        OptionalDouble rMinOptional = DoubleStream.of(r[0]).min();
-
-        assert rMinOptional.isPresent();
-
-        double rMin = rMinOptional.getAsDouble();
-
-        return 1.0 / rMin;
-    }
-
-    double[] getColumn(double[][] src, int index) {
-        return Arrays.stream(src).mapToDouble(doubles -> doubles[index]).toArray();
-    }
-
-    double[] getColumn(ArrayList<double[]> src, int index) {
-        return src.stream().mapToDouble(doubles -> doubles[index]).toArray();
-    }
-
-    // Waow
-    double[][] subtractArrays(double[] src1, double[] src2) {
-        double[][] result = new double[src1.length][src2.length];
-
-        for (int i = 0; i < src1.length; i++) {
-            for (int j = 0; j < src2.length; j++) {
-                result[i][j] = src1[i] - src2[j];
+        for (double[] point : trajectory) {
+            for (FieldNode fieldNode : fieldNodes) {
+                if (fieldNode.type != FieldNode.NodeType.OBSTACLE) continue;
+                double dx = Math.abs(point[0] - fieldNode.position.getX(DistanceUnit.METER)) - (fieldNode.width / 2.0);
+                double dy = Math.abs(point[1] - fieldNode.position.getY(DistanceUnit.METER)) - (fieldNode.height / 2.0);
+                double distanceToEdge = Math.hypot(Math.max(0, dx), Math.max(0, dy));
+                minDistance = Math.min(minDistance, distanceToEdge);
             }
         }
 
-        return result;
+        if (minDistance > safetyMargin) return 0.0;
+        double clearance = minDistance - (ROBOT_WIDTH / 2.0);
+        if (clearance <= 0.001) return Double.POSITIVE_INFINITY;
+        return 1.0 / clearance;
     }
 
-    double[][] hypot2DArray(double[][] x, double[][] y) {
-        // Better not be empty, or it'll crash
-        assert x.length <= 1;
-        assert x[0].length <= 1;
-
-        // Better be the same dimensions
-        assert x.length == y.length;
-        assert x[0].length == y[0].length;
-
-        double[][] result = new double[x.length][x[0].length];
-
-        for (int i = 0; i < x.length; i++) {
-            for (int j = 0; j < x[0].length; j++) {
-                // Set the result in the corresponding slot to the hypotenuse of the corresponding x and y :D
-                result[i][j] = Math.hypot(x[i][j], y[i][j]);
-            }
-        }
-
-        return result;
-    }
-
-    double[][][] transpose3DArray(double[][][] src, int[] axes) {
-        int[] dims = new int[] { src.length, src[0].length, src[0][0].length };
-
-        int newDim0 = dims[axes[0]];
-        int newDim1 = dims[axes[1]];
-        int newDim2 = dims[axes[2]];
-
-        double[][][] transposedArray = new double[newDim0][newDim1][newDim2];
-
-        for (int i = 0; i < dims[0]; i++) {
-            for (int j = 0; j < dims[1]; j++) {
-                for (int k = 0; k < dims[2]; k++) {
-                    int[] indexes = new int[]{i, j, k};
-                    transposedArray
-                            [indexes[axes[0]]]
-                            [indexes[axes[1]]]
-                            [indexes[axes[2]]] = src[i][j][k];
-                }
-            }
-        }
-
-        return transposedArray;
-    }
-
-
-    double[][] predictTrajectory(double[] state, double v, double y) {
-        double[][] trajectory = new double[][] { state };
-
+    double[][] predictTrajectory(double[] state, double[] u) {
+        double[][] trajectory = new double[][]{state};
         double time = 0.0;
+        double predictTime = 3.0;
 
-        while (time <= 3.0) {
-            double[] x = motionModel(state, new double[] { v, y });
-
+        while (time <= predictTime) {
+            double[] x = motionModel(trajectory[trajectory.length - 1], u, DT);
             trajectory = Arrays.copyOf(trajectory, trajectory.length + 1);
             trajectory[trajectory.length - 1] = x;
-
-            time += 0.1;
+            time += DT;
         }
-
         return trajectory;
     }
 
-    // This better not be incorrect or I will scream
-    double[] motionModel(double[] state, double[] u) {
-        state[2] += u[1] * 0.1;
-        state[0] += u[0] * Math.cos(state[2]) * 0.1;
-        state[1] += u[0] * Math.cos(state[2]) * 0.1;
-        state[3] = u[0];
-        state[4] = u[1];
+    double[] motionModel(double[] state, double[] u, double dt) {
+        double[] newState = new double[6];
+        double yaw = state[2];
+        double vx_robot = u[0];
+        double vy_robot = u[1];
 
-        return state;
+        double vx_world = vx_robot * Math.cos(yaw) - vy_robot * Math.sin(yaw);
+        double vy_world = vx_robot * Math.sin(yaw) + vy_robot * Math.cos(yaw);
+
+        newState[0] = state[0] + vx_world * dt;
+        newState[1] = state[1] + vy_world * dt;
+        newState[2] = state[2] + u[2] * dt;
+        newState[3] = u[0];
+        newState[4] = u[1];
+        newState[5] = u[2];
+
+        return newState;
     }
 
-    public PlannerService(HardwareMap hardwareMap, LinkedBlockingQueue<VisionServiceOutput> visionServiceOutputQueue, LinkedBlockingQueue<DriveServiceInput> driveServiceInputQueue) {
+    double normalizeAngle(double angleRad) {
+        while (angleRad > Math.PI) angleRad -= 2.0 * Math.PI;
+        while (angleRad <= -Math.PI) angleRad += 2.0 * Math.PI;
+        return angleRad;
+    }
+
+    public PlannerService(HardwareMap hardwareMap, LinkedBlockingQueue<VisionServiceOutput> visionServiceOutputQueue, LinkedBlockingQueue<DriveServiceInput> driveServiceInputQueue, FieldConfig fieldConfig, BehaviorScript behaviorScript, Alliance alliance) {
+        // ... (constructor is unchanged)
         this.visionServiceOutputQueue = visionServiceOutputQueue;
         this.driveServiceInputQueue = driveServiceInputQueue;
-        this.hardwareMap = hardwareMap;
+        this.fieldConfig = fieldConfig;
+        this.behaviorScript = behaviorScript;
+        this.fieldNodes = new ArrayList<>(Arrays.asList(fieldConfig.getFixedFieldNodes()));
+        this.fieldNodes.addAll(Arrays.asList(fieldConfig.getStartingDynamicFieldNodes()));
+        this.alliance = alliance;
+        this.pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
+
+        // Setup pinpoint
+        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+        pinpoint.setOffsets(-170, 0, DistanceUnit.MM);
+        pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
+
+        pinpoint.resetPosAndIMU();
+
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void run() {
-        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
+        double[] state;
+        this.behaviorScript.setHasScoringElement(true);
+        Log.i("PlannerService", String.format("Starting planner with goal at (%.3f, %.3f) meters%n", goal.getX(DistanceUnit.METER), goal.getY(DistanceUnit.METER)));
 
-        // PLACEHOLDERS, UPDATE LATER
-        pinpoint.setOffsets(-84.0, -168.0, DistanceUnit.MM);
+        // Set starting position
+        pinpoint.setPosY(0.6096, DistanceUnit.METER);
 
-//        State robotState = new State();
+        try (ServerSocket serverSocket = new ServerSocket(6888)) { // Idc, just use an unused port
+            Socket socket = serverSocket.accept();
+            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+            while (true) {
+                pinpoint.update();
 
-        while (true) {
-            VisionServiceOutput visionOutput = visionServiceOutputQueue.poll();
-
-            if (visionOutput != null) {
-                if (visionOutput.type == VisionServiceOutput.VisionResultType.ROBOT) {
-                    // Probably don't wanna crash into another bot, inform the planner of its presence and position
-
+                try {
+                    Thread.sleep((long) (DT * 1000));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
                 }
+
+                // GoBilda is fat, ugly, and stupid so their "Y-axis" is our X-axis and vice versa
+                state = new double[]{
+                        pinpoint.getPosY(DistanceUnit.METER), pinpoint.getPosX(DistanceUnit.METER), pinpoint.getHeading(UnnormalizedAngleUnit.RADIANS),
+                        pinpoint.getVelY(DistanceUnit.METER), pinpoint.getVelX(DistanceUnit.METER), pinpoint.getHeadingVelocity(UnnormalizedAngleUnit.RADIANS)
+                };
+
+
+//            Log.i("PlannerService", String.format("New state: %s", Arrays.toString(state)));
+
+                Log.i("PlannerService", "Angle: " + pinpoint.getHeading(AngleUnit.RADIANS));
+                // ... (vision processing is unchanged) ...
+
+                if (!goalActive) {
+                    Pair<Pose2D, Optional<Function<LinkedBlockingQueue<DriveServiceInput>, Void>>> behaviorGoalPair =
+                            behaviorScript.getGoal(fieldNodes, state, alliance);
+                    goal = behaviorGoalPair.getKey();
+                    goalActive = true;
+                }
+
+                if (isGoalReached(state)) {
+                    Log.i("PlannerService", String.format("Goal reached! Robot at (%.3f, %.3f), goal at (%.3f, %.3f)%n",
+                            state[0], state[1], goal.getX(DistanceUnit.METER), goal.getY(DistanceUnit.METER)));
+                    driveServiceInputQueue.add(new DriveServiceInput(new double[]{0.0, 0.0, 0.0}));
+                    goalActive = false;
+                    Log.i("PlannerService", "Goal deactivated, waiting for new goal.");
+                    continue; // Skip planning until a new goal is set
+                }
+
+                state[2] = normalizeAngle(state[2]);
+                double[] dynamicWindow = dynamicWindow(state);
+                Pair<Pair<double[], double[][]>, TrajectoryVisualizationData> result = calcControlAndTrajectoryWithVisualization(state, dynamicWindow, goal);
+                double[] control = result.getKey().getKey();
+
+                TrajectoryVisualizationDataProtobuf.TrajectoryVisualizationData protobufData =
+                        TrajectoryDataConverter.serialize(result.getValue());
+
+                byte[] sendData = protobufData.toByteArray();
+
+                if (socket.isConnected()) {
+                    System.out.println("Length: " + sendData.length);
+
+                    out.writeInt(sendData.length);
+                    out.write(sendData);
+                    out.flush();
+                }
+
+                driveServiceInputQueue.add(new DriveServiceInput(control));
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
