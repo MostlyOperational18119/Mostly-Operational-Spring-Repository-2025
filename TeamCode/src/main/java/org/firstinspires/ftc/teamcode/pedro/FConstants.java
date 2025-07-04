@@ -9,6 +9,6 @@ public class FConstants {
         FollowerConstants.localizers = Localizers.THREE_WHEEL;
 
         // We can change the value of any variable/constant of FollowerConstants.
-        FollowerConstants.mass = 10; // In kg
+        FollowerConstants.mass = 14.515; // In kg
     }
 }
