@@ -15,15 +15,15 @@ public class PicklebotTeleop extends LinearOpMode {
         double flywheelGradient = 0.0015;
         double flywheelDisengagedPower = 0.1;
         double flywheelPower = 1.0;
-        double DriveSpeedDivider = 5.0;
-        int rotationMotorMax = 0; //unknown
-        int rotationMotorMin = -300; //unknown
-        double lockServoLocked = 0.55; //unknown
-        double lockServoUnlocked = 0.2; //unknown
-        double dropperServoIntake = 0.165; //unknown
-        double dropperServoDrop = 0.06; //unknown
-        double plungerServoLoaded = 0.04; //unknown
-        double plungerServoFire = 0.23; //unknown
+        double DriveSpeedDivider = 2.0;
+        int rotationMotorMax = 0;
+        int rotationMotorMin = -300;
+        double lockServoLocked = 0.55;
+        double lockServoUnlocked = 0.2;
+        double dropperServoIntake = 0.165;
+        double dropperServoDrop = 0.06;
+        double plungerServoLoaded = 0.04;
+        double plungerServoFire = 0.23;
         //END SETTINGS//
 
         float driverLeftX = gamepad1.left_stick_x;
@@ -61,7 +61,7 @@ public class PicklebotTeleop extends LinearOpMode {
             CurrentGamepad.copy(gamepad1);
             driverLeftX = gamepad1.left_stick_x;
             driverLeftY = -gamepad1.left_stick_y;
-            driverRightX = gamepad1.right_stick_x;
+            driverRightX = -gamepad1.right_stick_x;
 
             if (gamepad1.a && !PreviousGamepad.a) {
                 Flywheels = !Flywheels;
