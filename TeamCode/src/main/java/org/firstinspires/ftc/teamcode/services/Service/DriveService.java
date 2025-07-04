@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.services.Service;
 
+import android.util.Log;
+
 import com.arcrobotics.ftclib.geometry.Translation2d;
 import com.arcrobotics.ftclib.kinematics.wpilibkinematics.ChassisSpeeds;
 import com.arcrobotics.ftclib.kinematics.wpilibkinematics.MecanumDriveKinematics;
@@ -8,8 +10,12 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.GoBildaPinpointDriver;
 import org.firstinspires.ftc.teamcode.services.Communication.DriveServiceInput;
+import org.firstinspires.ftc.teamcode.services.Service.Planner.PlannerService;
 
+import java.util.Arrays;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -21,6 +27,11 @@ public class DriveService implements Runnable {
     DcMotor verticalSlide;
     DcMotor horizontalSlide;
     HardwareMap hardwareMap;
+    GoBildaPinpointDriver pinpoint;
+
+    final private LinkedBlockingQueue<DriveServiceInput> inputQueue;
+
+    private Boolean isOnlyWheels;
 
     // Constants for FTCLib Kinematics, double check at some point
     // 23 cm wide 30 cm long
@@ -38,10 +49,6 @@ public class DriveService implements Runnable {
             motorBRLocation
     );
 
-    final private LinkedBlockingQueue<DriveServiceInput> inputQueue;
-
-    private Boolean isOnlyWheels;
-
     public DriveService(HardwareMap hardwareMap, LinkedBlockingQueue<DriveServiceInput> inputQueue, Boolean isOnlyWheels) {
         this.hardwareMap = hardwareMap;
         this.inputQueue = inputQueue;
@@ -51,6 +58,7 @@ public class DriveService implements Runnable {
         motorFR = hardwareMap.get(DcMotor.class, "motorFR");
         motorBL = hardwareMap.get(DcMotor.class, "motorBL");
         motorBR = hardwareMap.get(DcMotor.class, "motorBR");
+        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
 
 //        motorFR.setDirection(DcMotorSimple.Direction.REVERSE);
         motorFL.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -95,16 +103,41 @@ public class DriveService implements Runnable {
                         motorBL.setPower(0.0);
                         motorBR.setPower(0.0);
                     } else if (input.mode == DriveServiceInput.DriveServiceInputMode.PLAN) {
-                        ChassisSpeeds speeds = new ChassisSpeeds(input.forwardSpeed, input.sidewaysSpeed, input.rotationSpeed);
+                        Log.i("DriveService", "Control: " + Arrays.toString(input.control));
+                        double posControlX = input.control[1]; // Swapped :D
+                        double posControlY = input.control[0];
+                        double rotControl = input.control[2];
 
-                        MecanumDriveWheelSpeeds wheelSpeeds = kinematics.toWheelSpeeds(speeds);
+                        ChassisSpeeds chassisSpeeds = new ChassisSpeeds(
+                                posControlX,
+                                posControlY,
+                                rotControl
+                        );
 
-                        wheelSpeeds.normalize(MAX_SPEED);
+                        MecanumDriveWheelSpeeds wheelspeeds = kinematics.toWheelSpeeds(chassisSpeeds);
 
-                        motorFL.setPower(wheelSpeeds.frontLeftMetersPerSecond / MAX_SPEED);
-                        motorFR.setPower(wheelSpeeds.frontLeftMetersPerSecond / MAX_SPEED);
-                        motorBL.setPower(wheelSpeeds.rearLeftMetersPerSecond / MAX_SPEED);
-                        motorBR.setPower(wheelSpeeds.rearRightMetersPerSecond / MAX_SPEED);
+                        final double MIN_POWER = 0.85; // TODO: CHOOSE A BETTER MIN POWER
+                        final double MAX_POWER = 1.0; // TODO: CHOOSE A BETTER MAX POWER
+                        double powerFL = MIN_POWER + ( (wheelspeeds.frontLeftMetersPerSecond / PlannerService.MAX_LINEAR_VELOCITY) * (MAX_POWER - MIN_POWER) );
+                        double powerFR = MIN_POWER + ( (wheelspeeds.frontRightMetersPerSecond / PlannerService.MAX_LINEAR_VELOCITY) * (MAX_POWER - MIN_POWER) );
+                        double powerBL = MIN_POWER + ( (wheelspeeds.rearLeftMetersPerSecond / PlannerService.MAX_LINEAR_VELOCITY) * (MAX_POWER - MIN_POWER) );
+                        double powerBR = MIN_POWER + ( (wheelspeeds.rearRightMetersPerSecond / PlannerService.MAX_LINEAR_VELOCITY) * (MAX_POWER - MIN_POWER) );
+
+                        motorFL.setPower(powerFL);
+                        motorFR.setPower(powerFR);
+                        motorBL.setPower(powerBL);
+                        motorBR.setPower(powerBR);
+
+                        Log.i(
+                                "DriveService",
+                                String.format(
+                                        "FL(%.2f) FR(%.2f) BL(%.2f) BR(%.2f)",
+                                        powerFL,
+                                        powerFR,
+                                        powerBL,
+                                        powerBR
+                                )
+                        );
                     }
                 }
             }
