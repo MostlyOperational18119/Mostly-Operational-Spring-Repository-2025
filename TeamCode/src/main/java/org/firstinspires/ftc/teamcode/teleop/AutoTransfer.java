@@ -3,45 +3,53 @@ package org.firstinspires.ftc.teamcode.teleop;
 import android.view.SearchEvent;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+
 public class AutoTransfer {
     private enum State {
-        IDLE,
-        RESET_VERT_SLIDE,
-        RETRACT_SLIDES,
+        RESET_SLIDES,
         CLOSE_OUT_CLAW,
         LIFT_VERT_SLIDE,
         ROTATE_OUT_ARM,
         DONE;
     }
 
-    private State currentState = State.IDLE;
+    private State currentState = State.DONE;
     private long stateStartTime;
     private long horRetractTime;
 
     private final Servo outClaw;
     private final DcMotor verticalSlide;
     private final DcMotor horizontalSlide;
+    private final DcMotor intakeMotor;
     private final Servo outRotation;
     private final Servo outSwivel;
+    private final Servo inRotation;
+    private final Telemetry telemetry;
+    private boolean hasReset = false;
 
-    public AutoTransfer(HardwareMap hardwareMap) {
+    public AutoTransfer(HardwareMap hardwareMap, Telemetry telemetry) {
+        this.telemetry = telemetry;
         outClaw = hardwareMap.get(Servo.class, "OutClaw");
         verticalSlide = hardwareMap.get(DcMotor.class, "verticalSlide");
         horizontalSlide = hardwareMap.get(DcMotor.class, "horizontalSlide");
         outRotation = hardwareMap.get(Servo.class, "OutRotation");
         outSwivel = hardwareMap.get(Servo.class, "OutSwivel");
+        inRotation = hardwareMap.get(Servo.class, "InRotation");
         verticalSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         verticalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         horizontalSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         horizontalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        intakeMotor = hardwareMap.dcMotor.get("intakeMotor");
     }
 
     public void startTransfer() {
-        if (currentState == State.IDLE || currentState == State.DONE) {
-            currentState = State.RESET_VERT_SLIDE;
+        if (currentState == State.DONE) {
+            currentState = State.RESET_SLIDES;
             stateStartTime = System.currentTimeMillis();
         }
     }
@@ -50,29 +58,28 @@ public class AutoTransfer {
         long elapsed = System.currentTimeMillis() - stateStartTime;
 
         switch (currentState) {
-            case RESET_VERT_SLIDE:
-                verticalSlide.setTargetPosition(1000);
-                outSwivel.setPosition(0.17);
-                outRotation.setPosition(0.98);
-                outClaw.setPosition(0.4);
-                horizontalSlide.setTargetPosition(0);
-                horizontalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                horizontalSlide.setPower(0.5);
-                if (elapsed > 500) {
-                    currentState = State.RETRACT_SLIDES;
-                    stateStartTime = System.currentTimeMillis();
-                    horRetractTime = /*-horizontalSlide.getCurrentPosition()*100000L*/ 2000;
-                }
-            case RETRACT_SLIDES:
+            case RESET_SLIDES:
                 verticalSlide.setTargetPosition(0);
                 verticalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 verticalSlide.setPower(0.5);
+                outSwivel.setPosition(0.17);
+                outRotation.setPosition(0.98);
+                outClaw.setPosition(0.4);
+                inRotation.setPosition(0.04);
                 horizontalSlide.setTargetPosition(0);
                 horizontalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                horizontalSlide.setPower(0.5);
-                if (elapsed > 2000) {
-                    currentState = State.CLOSE_OUT_CLAW;
-                    stateStartTime = System.currentTimeMillis();
+                horizontalSlide.setPower(1);
+                intakeMotor.setPower(1);
+                telemetry.addData("should switch continue", verticalSlide.getCurrentPosition() <= 100 && horizontalSlide.getCurrentPosition() <= 100);
+                if (verticalSlide.getCurrentPosition() <= 100 && horizontalSlide.getCurrentPosition() <= 100) {
+                    if (!hasReset) {
+                        hasReset = true;
+                        stateStartTime = System.currentTimeMillis();
+                    }
+                    telemetry.addData("elapsed", elapsed);
+                    if (elapsed > 1000) {
+                        currentState = State.CLOSE_OUT_CLAW;
+                    }
                 }
                 break;
             case CLOSE_OUT_CLAW:
@@ -80,6 +87,7 @@ public class AutoTransfer {
                 if (elapsed > 600) {
                     currentState = State.LIFT_VERT_SLIDE;
                     stateStartTime = System.currentTimeMillis();
+                    intakeMotor.setPower(0);
                 }
                 break;
             case LIFT_VERT_SLIDE:
@@ -100,18 +108,14 @@ public class AutoTransfer {
             case DONE:
                 // Optional: reset if needed
                 break;
-
-            case IDLE:
-                // Waiting for start
-                break;
         }
     }
 
     public boolean isBusy() {
-        return currentState != State.IDLE && currentState != State.DONE;
+        return currentState != State.DONE;
     }
 
-    public void reset() {
-        currentState = State.IDLE;
+    public State returnState() {
+        return currentState;
     }
 }

@@ -91,6 +91,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
 
         Servo inRotation = hardwareMap.servo.get("InRotation");
         inRotation.setPosition(0.57);
+        Servo outClaw = hardwareMap.get(Servo.class, "OutClaw");
 
         motorFL.setDirection(DcMotorSimple.Direction.REVERSE);
         motorBL.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -100,7 +101,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
         Gamepad gunnerCurrent = gamepad2;
         Gamepad gunnerPrevious = gamepad2;
 
-        AutoTransfer transfer = new AutoTransfer(hardwareMap);
+        AutoTransfer transfer = new AutoTransfer(hardwareMap, telemetry);
 
         float driverLeftX;
         float driverLeftY;
@@ -112,11 +113,6 @@ public class FirstJavaTeleOp extends LinearOpMode {
         boolean gunnerDown;
         boolean gunnerUp;
         boolean gunnerLB;
-        boolean hasARan = false;
-
-        boolean aPrev = false;
-        boolean aCurrent = false;
-
         double speedDiv = 1.0;
         int vertTarget = 0;
         int horizontalTarget = 0;
@@ -142,7 +138,6 @@ public class FirstJavaTeleOp extends LinearOpMode {
             gunnerLB = gamepad2.left_bumper;
             gunnerRightTrigger = gamepad2.right_trigger;
             gunnerLeftTrigger = gamepad2.left_trigger;
-            aCurrent = gamepad2.a;
 
             LLResult result = limelight.getLatestResult();
             LLStatus status = limelight.getStatus();
@@ -170,7 +165,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
             //horizontal slide controls?
             if (gunnerLeftY != 0) {
                 horizontalIsManual = true;
-                horizontalSlide.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                horizontalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             } else if (gunnerLB) {
                 horizontalTarget = 500;
                 horizontalIsManual = false;
@@ -184,46 +179,50 @@ public class FirstJavaTeleOp extends LinearOpMode {
                 horizontalSlideTo(horizontalSlide, horizontalTarget);
             }
 
-            if (gunnerRightTrigger > 0){
+            if (gunnerRightTrigger > 0) {
                 intakeMotor.setPower(gunnerRightTrigger);
-            } else {
+                inRotation.setPosition(0.57);
+            } else if (gunnerLeftTrigger > 0) {
                 intakeMotor.setPower(-gunnerLeftTrigger);
+                inRotation.setPosition(0.57);
+            } else {
+                intakeMotor.setPower(0);
             }
 
 
-            if (aCurrent && !aPrev && !transfer.isBusy()) {
+            if (gamepad2.aWasPressed() && !transfer.isBusy()) {
                 transfer.startTransfer();
-                hasARan = true;
+            }
+            if (gamepad2.right_bumper) {
+                if (outClaw.getPosition() == 0.4) {
+                    outClaw.setPosition(0.51);
+                } else {
+                    outClaw.setPosition(0.4);
+                }
+            }
 
-                    }
-            telemetry.addData("has A Ran", hasARan);
+//            if (gamepad2.bWasPressed()) {
+//                if ()
+//            }
 
+            if(gamepad2.rightStickButtonWasPressed()) {
+                verticalSlideTo(verticalSlide, 0);
+            }
             driverPrevious.copy(driverCurrent);
             driverCurrent.copy(gamepad1);
 
             gunnerPrevious.copy(gunnerCurrent);
             gunnerCurrent.copy(gamepad2);
-
-            aPrev = aCurrent;
-
             transfer.update();
 
             telemetry.addLine("Running");
-            telemetry.addData("Transfer State", transfer.isBusy() ? "Running" : "Idle");
+            telemetry.addData("Transfer State", transfer.returnState());
             telemetry.addData("vertical encoder: ", verticalSlide.getCurrentPosition());
             telemetry.addData("horizontal encoder: ", horizontalSlide.getCurrentPosition());
             telemetry.addData("horizontal manual mode: ", horizontalIsManual);
             telemetry.addData("horizontal target: ", horizontalTarget);
             telemetry.addData("gunnerLB: ", gunnerLB);
-            telemetry.addData("Speed div: ", speedDiv);
-            telemetry.addData("Motor FL: ", motorFL.getPower());
-            telemetry.addData("Motor FR: ", motorFR.getPower());
-            telemetry.addData("Motor BL: ", motorBL.getPower());
-            telemetry.addData("Motor BR: ", motorBR.getPower());
             telemetry.addData("Right X: ", gamepad1.right_stick_x);
-            telemetry.addData("Limelight Output: ", Arrays.toString(out));
-            telemetry.addData("Limelight Status: ", status.toString());
-            telemetry.addData("Pinpoint Pose: ", pinpoint.getPosition());
             telemetry.update();
         }
     }

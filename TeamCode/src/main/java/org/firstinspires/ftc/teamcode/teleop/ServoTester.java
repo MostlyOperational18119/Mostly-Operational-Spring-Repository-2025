@@ -12,7 +12,7 @@ public class ServoTester extends LinearOpMode {
         double Position = 0;
         Gamepad currentGamepad1 = new Gamepad();
         Gamepad previousGamepad1 = new Gamepad();
-        Servo dropperServo = hardwareMap.servo.get("InRotation");
+        Servo dropperServo = hardwareMap.servo.get("OutClaw");
 
         waitForStart();
         while (opModeIsActive()) {
