@@ -19,9 +19,9 @@ import org.firstinspires.ftc.teamcode.pedro.LConstants;
 @Autonomous(name = "Pedro Pathing Testing Auto")
 public class TestAuto extends LinearOpMode {
     Pose startPose = new Pose(132, 32, 90);
-    Pose controlPose1 = new Pose(132,100,0);
-    Pose controlPose2 = new Pose(102,131.6,0);
-    Pose goalPose = new Pose(50,132,180);
+    Pose controlPose1 = new Pose(139.88036410923277,132.01560468140443,0);
+    Pose controlPose2 = new Pose(104.86345903771131,119.65669700910273,0);
+    Pose goalPose = new Pose(50,120,180);
 
     @Override
     public void runOpMode() {
