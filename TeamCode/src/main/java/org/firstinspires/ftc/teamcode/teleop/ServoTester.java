@@ -12,7 +12,7 @@ public class ServoTester extends LinearOpMode {
         double Position = 0;
         Gamepad currentGamepad1 = new Gamepad();
         Gamepad previousGamepad1 = new Gamepad();
-        Servo dropperServo = hardwareMap.servo.get("OutClaw");
+        Servo dropperServo = hardwareMap.servo.get("InRotation");
 
         waitForStart();
         while (opModeIsActive()) {
@@ -31,3 +31,8 @@ public class ServoTester extends LinearOpMode {
         }
     }
 }
+
+//outswivel: 0.17
+//outrotation: 1
+//0.57 inRotation down
+//0.04 inRotation up

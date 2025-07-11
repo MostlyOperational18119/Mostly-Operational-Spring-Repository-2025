@@ -9,32 +9,31 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 public class MotorTester extends LinearOpMode {
     @Override
     public void runOpMode() {
-
-        DcMotor vertSlide = hardwareMap.get(DcMotor.class, "vertSlide");
+        DcMotor horSlide = hardwareMap.get(DcMotor.class, "horizontalSlide");
+        horSlide.setTargetPosition(0);
+        horSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        horSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         waitForStart();
-
-        Gamepad driverCurrent = gamepad1;
-        Gamepad driverPrevious = gamepad1;
-        Gamepad gunnerCurrent = gamepad2;
-        Gamepad gunnerPrevious = gamepad2;
 
 
         while (opModeIsActive()) {
+            if (gamepad1.aWasPressed()) {
+                horSlide.setTargetPosition(horSlide.getTargetPosition()-25);
+            }
 
-            driverCurrent.copy(driverPrevious);
-            gamepad1.copy(driverCurrent);
+            if (gamepad1.yWasPressed()) {
+                horSlide.setTargetPosition(horSlide.getTargetPosition()+25);
+            }
 
-            gunnerCurrent.copy(gunnerPrevious);
-            gamepad2.copy(gunnerCurrent);
-
-            Boolean up = gamepad1.y;
-            Boolean down = gamepad1.a;
-
-            vertSlide.setPower(up ? 0.1 : (down ? -0.1 : 0.0));
+            horSlide.setPower(1.0);
 
             telemetry.addLine("Running");
-            telemetry.addLine("Encoder Position: " + vertSlide.getCurrentPosition());
+            telemetry.addLine("Encoder Position: " + horSlide.getCurrentPosition());
+            telemetry.addData("Target Position:", horSlide.getTargetPosition());
+            telemetry.addData("Motor speed:", horSlide.getPower());
             telemetry.update();
+
+            sleep(50);
         }
     }
 }

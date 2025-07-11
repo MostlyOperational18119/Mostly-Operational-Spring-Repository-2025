@@ -90,7 +90,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
         pinpoint.resetPosAndIMU();
 
         Servo inRotation = hardwareMap.servo.get("InRotation");
-        inRotation.setPosition(0.81);
+        inRotation.setPosition(0.57);
 
         motorFL.setDirection(DcMotorSimple.Direction.REVERSE);
         motorBL.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -112,6 +112,10 @@ public class FirstJavaTeleOp extends LinearOpMode {
         boolean gunnerDown;
         boolean gunnerUp;
         boolean gunnerLB;
+        boolean hasARan = false;
+
+        boolean aPrev = false;
+        boolean aCurrent = false;
 
         double speedDiv = 1.0;
         int vertTarget = 0;
@@ -138,7 +142,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
             gunnerLB = gamepad2.left_bumper;
             gunnerRightTrigger = gamepad2.right_trigger;
             gunnerLeftTrigger = gamepad2.left_trigger;
-
+            aCurrent = gamepad2.a;
 
             LLResult result = limelight.getLatestResult();
             LLStatus status = limelight.getStatus();
@@ -186,15 +190,21 @@ public class FirstJavaTeleOp extends LinearOpMode {
                 intakeMotor.setPower(-gunnerLeftTrigger);
             }
 
-            /*if (gunnerCurrent.a && !gunnerPrevious.a && !transfer.isBusy()) {
+
+            if (aCurrent && !aPrev && !transfer.isBusy()) {
                 transfer.startTransfer();
-            }*/
+                hasARan = true;
+
+                    }
+            telemetry.addData("has A Ran", hasARan);
 
             driverPrevious.copy(driverCurrent);
             driverCurrent.copy(gamepad1);
 
             gunnerPrevious.copy(gunnerCurrent);
             gunnerCurrent.copy(gamepad2);
+
+            aPrev = aCurrent;
 
             transfer.update();
 
