@@ -18,6 +18,10 @@ import java.util.Arrays;
 
 @TeleOp(name = "First Java TeleOp")
 public class FirstJavaTeleOp extends LinearOpMode {
+    private enum States {
+        Drive,
+        Place
+    }
     public void verticalSlideTo(DcMotorEx slide, Integer target) {
         double P;
         double D;
@@ -45,15 +49,31 @@ public class FirstJavaTeleOp extends LinearOpMode {
         slide.setPower(verticalPower + feedforward);
     }
 
-    public void horizontalSlideTo(DcMotor slide, Integer target) {
-        slide.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+    public void horizontalSlideTo(DcMotorEx slide, Integer target) {
+        double P;
+        double D;
+        double feedforward;
+
+        double error = target - slide.getCurrentPosition();
+
         if (slide.getCurrentPosition() > target) {
-            slide.setPower(-0.2);
-        } else if (slide.getCurrentPosition() < target) {
-            slide.setPower(0.2);
+            P = 0.004;
+            D = 0.0;
+            if (Math.abs(error) < 50) {
+                feedforward = 0.0;
+            } else {
+                feedforward = 0.11;
+            }
         } else {
-            slide.setPower(0);
+            P = 0.03;
+            D = 0.0002;
+            feedforward = 0.0;
         }
+
+        double derivative = -slide.getVelocity();
+        double verticalPower = P * (target - slide.getCurrentPosition()) + D * derivative;
+
+        slide.setPower(verticalPower + feedforward);
     }
 
     @Override
@@ -74,7 +94,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
         verticalSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         verticalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        DcMotor horizontalSlide = hardwareMap.dcMotor.get("horizontalSlide");
+        DcMotorEx horizontalSlide = hardwareMap.get(DcMotorEx.class, "horizontalSlide");
         horizontalSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         horizontalSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         horizontalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -90,8 +110,10 @@ public class FirstJavaTeleOp extends LinearOpMode {
         pinpoint.resetPosAndIMU();
 
         Servo inRotation = hardwareMap.servo.get("InRotation");
+        Servo outRotation = hardwareMap.servo.get("OutRotation");
         inRotation.setPosition(0.57);
         Servo outClaw = hardwareMap.get(Servo.class, "OutClaw");
+        Servo inStop = hardwareMap.get(Servo.class, "InStop");
 
         motorFL.setDirection(DcMotorSimple.Direction.REVERSE);
         motorBL.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -110,13 +132,15 @@ public class FirstJavaTeleOp extends LinearOpMode {
         float gunnerLeftY;
         float gunnerRightTrigger;
         float gunnerLeftTrigger;
-        boolean gunnerDown;
-        boolean gunnerUp;
         boolean gunnerLB;
         double speedDiv = 1.0;
+        double outPosition = 0.29;
+        double clawGrabPosition = 0.98;
+        long startTime = 0;
         int vertTarget = 0;
         int horizontalTarget = 0;
         boolean horizontalIsManual = true;
+        States currentState = States.Drive;
 
         telemetry.addLine("Init done");
         telemetry.update();
@@ -126,104 +150,143 @@ public class FirstJavaTeleOp extends LinearOpMode {
         limelight.start();
 
         while (opModeIsActive()) {
-            pinpoint.update();
+            switch (currentState) {
+                case Drive:
+                    pinpoint.update();
 
-            driverLeftX = gamepad1.left_stick_x;
-            driverLeftY = -gamepad1.left_stick_y;
-            driverRightX = gamepad1.right_stick_x;
+                    driverLeftX = gamepad1.left_stick_x;
+                    driverLeftY = -gamepad1.left_stick_y;
+                    driverRightX = gamepad1.right_stick_x;
 
-            gunnerLeftY = gamepad2.left_stick_y;
-            gunnerDown = gamepad2.dpad_down;
-            gunnerUp = gamepad2.dpad_up;
-            gunnerLB = gamepad2.left_bumper;
-            gunnerRightTrigger = gamepad2.right_trigger;
-            gunnerLeftTrigger = gamepad2.left_trigger;
+                    gunnerLeftY = gamepad2.left_stick_y;
+                    gunnerLB = gamepad2.left_bumper;
+                    gunnerRightTrigger = gamepad2.right_trigger;
+                    gunnerLeftTrigger = gamepad2.left_trigger;
 
-            LLResult result = limelight.getLatestResult();
-            LLStatus status = limelight.getStatus();
-            double[] out = new double[] {};
-            if (result != null) {
-                out = result.getPythonOutput();
-            } else {
-                telemetry.addLine("Warning: LimeLight output is null");
+                    LLResult result = limelight.getLatestResult();
+                    LLStatus status = limelight.getStatus();
+                    double[] out = new double[] {};
+                    if (result != null) {
+                        out = result.getPythonOutput();
+                    } else {
+                        telemetry.addLine("Warning: LimeLight output is null");
+                    }
+
+                    motorFL.setPower(Math.atan(1.12*(driverLeftY + driverLeftX + driverRightX)) / speedDiv);
+                    motorFR.setPower(Math.atan(1.12*(driverLeftY - driverLeftX - driverRightX)) / speedDiv);
+                    motorBL.setPower(Math.atan(1.12*(driverLeftY - driverLeftX + driverRightX)) / speedDiv);
+                    motorBR.setPower(Math.atan(1.12*(driverLeftY + driverLeftX - driverRightX)) / speedDiv);
+
+                    verticalSlideTo(verticalSlide, vertTarget);
+
+                    //horizontal slide controls?
+                    if (gunnerLeftY != 0) {
+                        horizontalIsManual = true;
+                        horizontalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                    } else if (gunnerLB) {
+                        horizontalTarget = 500;
+                        horizontalIsManual = false;
+                    }
+
+                    if (horizontalIsManual) {
+                        horizontalSlide.setPower(-gunnerLeftY);
+                    }
+
+                    if(!horizontalIsManual) {
+                        horizontalSlideTo(horizontalSlide, horizontalTarget);
+                    }
+
+                    if (gunnerRightTrigger > 0) {
+                        intakeMotor.setPower(gunnerRightTrigger);
+                        inRotation.setPosition(0.57);
+                    } else if (gunnerLeftTrigger > 0) {
+                        intakeMotor.setPower(-gunnerLeftTrigger);
+                        inRotation.setPosition(0.57);
+                    } else {
+                        intakeMotor.setPower(0);
+                    }
+
+                    if (horizontalSlide.getCurrentPosition() <= 100) {
+                        inStop.setPosition(0.37);
+                    } else {
+                        inStop.setPosition(0.86);
+                    }
+
+                    if (gamepad2.aWasPressed() && !transfer.isBusy()) {
+                        transfer.startTransfer(outPosition);
+                    }
+
+                    if (gamepad1.yWasPressed()) {
+                        currentState = States.Place;
+                        startTime = System.currentTimeMillis();
+                    }
+                    if (gamepad2.right_bumper) {
+                        if (outClaw.getPosition() == 0.4) {
+                            outClaw.setPosition(0.51);
+                        } else {
+                            outClaw.setPosition(0.4);
+                        }
+                    }
+
+                    if (gamepad2.bWasPressed()) {
+                        if (outPosition == 0.29) {
+                            outPosition = 0.58;
+                        } else {
+                            outPosition = 0.29;
+                        }
+                    }
+                    if (verticalSlide.getCurrentPosition() >= 750) {
+                        outRotation.setPosition(outPosition);
+                    }
+                    if (gamepad2.dpadDownWasPressed()) {
+                        vertTarget = 0;
+                        if (clawGrabPosition == 0.98) {
+                            clawGrabPosition = 0.72;
+                        } else {
+                            clawGrabPosition = 0.98;
+                        }
+                    }
+
+                    if (gamepad2.dpadUpWasPressed()) {
+                        vertTarget = 1600;
+                    }
+
+
+                    if(gamepad2.rightStickButtonWasPressed()) {
+                        outRotation.setPosition(clawGrabPosition);
+                        vertTarget = 0;
+                    }
+                    if(gamepad2.leftStickButtonWasPressed()) {
+                        horizontalIsManual = false;
+                        horizontalTarget = 0;
+                    }
+                    driverPrevious.copy(driverCurrent);
+                    driverCurrent.copy(gamepad1);
+
+                    gunnerPrevious.copy(gunnerCurrent);
+                    gunnerCurrent.copy(gamepad2);
+                    transfer.update();
+
+                    telemetry.addLine("Running");
+                    telemetry.addData("Transfer State", transfer.returnState());
+                    telemetry.addData("vertical encoder: ", verticalSlide.getCurrentPosition());
+                    telemetry.addData("outPosition: ", outPosition);
+                    telemetry.addData("horizontal encoder: ", horizontalSlide.getCurrentPosition());
+                    telemetry.addData("horizontal manual mode: ", horizontalIsManual);
+                    telemetry.addData("horizontal target: ", horizontalTarget);
+                    telemetry.addData("gunnerLB: ", gunnerLB);
+                    telemetry.addData("Right X: ", gamepad1.right_stick_x);
+                    telemetry.update();
+                    break;
+                case Place:
+                    long elapsed = System.currentTimeMillis() - startTime;
+                    horizontalSlideTo(horizontalSlide, 800);
+                    if (elapsed >= 1000) {
+                        outClaw.setPosition(0.4);
+                        currentState = States.Drive;
+                    }
+                    break;
             }
-
-            motorFL.setPower(Math.atan(1.12*(driverLeftY + driverLeftX + driverRightX)) / speedDiv);
-            motorFR.setPower(Math.atan(1.12*(driverLeftY - driverLeftX - driverRightX)) / speedDiv);
-            motorBL.setPower(Math.atan(1.12*(driverLeftY - driverLeftX + driverRightX)) / speedDiv);
-            motorBR.setPower(Math.atan(1.12*(driverLeftY + driverLeftX - driverRightX)) / speedDiv);
-
-            //vertical slide controls with dpad arrows
-            if (gunnerDown) {
-                vertTarget = 0;
-            } else if (gunnerUp) {
-                vertTarget = 1000;
-            }
-
-            verticalSlideTo(verticalSlide, vertTarget);
-
-            //horizontal slide controls?
-            if (gunnerLeftY != 0) {
-                horizontalIsManual = true;
-                horizontalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            } else if (gunnerLB) {
-                horizontalTarget = 500;
-                horizontalIsManual = false;
-            }
-
-            if (horizontalIsManual) {
-                horizontalSlide.setPower(-gunnerLeftY);
-            }
-
-            if(!horizontalIsManual) {
-                horizontalSlideTo(horizontalSlide, horizontalTarget);
-            }
-
-            if (gunnerRightTrigger > 0) {
-                intakeMotor.setPower(gunnerRightTrigger);
-                inRotation.setPosition(0.57);
-            } else if (gunnerLeftTrigger > 0) {
-                intakeMotor.setPower(-gunnerLeftTrigger);
-                inRotation.setPosition(0.57);
-            } else {
-                intakeMotor.setPower(0);
-            }
-
-
-            if (gamepad2.aWasPressed() && !transfer.isBusy()) {
-                transfer.startTransfer();
-            }
-            if (gamepad2.right_bumper) {
-                if (outClaw.getPosition() == 0.4) {
-                    outClaw.setPosition(0.51);
-                } else {
-                    outClaw.setPosition(0.4);
-                }
-            }
-
-//            if (gamepad2.bWasPressed()) {
-//                if ()
-//            }
-
-            if(gamepad2.rightStickButtonWasPressed()) {
-                verticalSlideTo(verticalSlide, 0);
-            }
-            driverPrevious.copy(driverCurrent);
-            driverCurrent.copy(gamepad1);
-
-            gunnerPrevious.copy(gunnerCurrent);
-            gunnerCurrent.copy(gamepad2);
-            transfer.update();
-
-            telemetry.addLine("Running");
-            telemetry.addData("Transfer State", transfer.returnState());
-            telemetry.addData("vertical encoder: ", verticalSlide.getCurrentPosition());
-            telemetry.addData("horizontal encoder: ", horizontalSlide.getCurrentPosition());
-            telemetry.addData("horizontal manual mode: ", horizontalIsManual);
-            telemetry.addData("horizontal target: ", horizontalTarget);
-            telemetry.addData("gunnerLB: ", gunnerLB);
-            telemetry.addData("Right X: ", gamepad1.right_stick_x);
-            telemetry.update();
         }
     }
 }
