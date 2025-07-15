@@ -8,27 +8,99 @@ import com.pedropathing.util.Constants;
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.pedro.FConstants;
 import org.firstinspires.ftc.teamcode.pedro.LConstants;
 
+@SuppressWarnings("unused")
 @Autonomous(name = "Basket 5 Blue Auto")
 public class Basket5Blue extends LinearOpMode {
-    Pose startPose = new Pose(35.5, 10, Math.toRadians(90));
-    Pose placeSample = new Pose(13, 133.5, Math.toRadians(135));
-    Pose pickupSample1 = new Pose(25.7, 23, Math.toRadians(180));
-    Pose pickupSample2 = new Pose(25.7, 12, Math.toRadians(180));
-    Pose pickupSample3 = new Pose(33, 14.8, Math.toRadians(135));
-    Pose pickupSample4 = new Pose(28, 121.5, Math.toRadians(180));
+    DcMotor verticalSlide;
+    DcMotor horizontalSlide;
+    Servo outClaw;
+    Servo inRotation;
+    Servo outRotation;
+    DcMotor intakeMotor;
 
-    PathChain scorePreloadedSample, pickupSample1Path, scoreSample1, pickupSample2Path, scoreSample2, pickupSample3Path, scoreSample3, pickupSample4Path, scoreSample4;
+    Pose startPose = new Pose(9, 87, Math.toRadians(90));
+    Pose placeSample = new Pose(9, 135, Math.toRadians(135));
+    Pose pickupSample1 = new Pose(28, 120, Math.toRadians(180));
+    Pose pickupSample2 = new Pose(9, 135, Math.toRadians(180));
+    Pose pickupSample3 = new Pose(28, 132, Math.toRadians(225));
+//    Pose pickupSample4 = new Pose(28, 121.5, Math.toRadians(180));
+
+    PathChain scorePreloadedSample, pickupSample1Path, scoreSample1, pickupSample2Path, scoreSample2, pickupSample3Path, scoreSample3;//, pickupSample4Path, scoreSample4;
+
+    private void place() {
+        verticalSlide.setTargetPosition(1600);
+
+        verticalSlide.setPower(1.0);
+
+        while (Math.abs(1600 - verticalSlide.getCurrentPosition()) > 10) {
+            sleep(10);
+        }
+
+        outRotation.setPosition(0.29);
+
+        sleep(500);
+
+        outClaw.setPosition(0.4);
+
+        sleep(100);
+
+        verticalSlide.setTargetPosition(50);
+
+        verticalSlide.setPower(-1.0);
+
+        while (Math.abs(50 - verticalSlide.getCurrentPosition()) > 10) {
+            sleep(10);
+        }
+    }
+
+    private void pickup() {
+        inRotation.setPosition(0.57);
+        intakeMotor.setPower(1.0);
+
+        horizontalSlide.setTargetPosition(1000);
+
+        horizontalSlide.setPower(0.7);
+
+        while (Math.abs(1000 - horizontalSlide.getCurrentPosition()) > 10) {
+            sleep(10);
+        }
+
+        sleep(100);
+
+
+    }
 
     @Override
     public void runOpMode() {
+        verticalSlide = hardwareMap.dcMotor.get("verticalSlide");
+        horizontalSlide = hardwareMap.dcMotor.get("horizontalSlide");
+        outClaw = hardwareMap.servo.get("OutClaw");
+        inRotation = hardwareMap.servo.get("InRotation");
+        outRotation = hardwareMap.servo.get("OutRotation");
+        intakeMotor = hardwareMap.dcMotor.get("intakeMotor");
+
+
+        verticalSlide.setTargetPosition(0);
+        verticalSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        verticalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        verticalSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        horizontalSlide.setTargetPosition(0);
+        horizontalSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        horizontalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        horizontalSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
         Timer pathTimer = new Timer();
         Constants.setConstants(FConstants.class, LConstants.class);
         Follower follower = new Follower(hardwareMap, FConstants.class, LConstants.class);
         follower.setStartingPose(startPose);
+
 
 
         scorePreloadedSample = follower.pathBuilder()
@@ -66,15 +138,15 @@ public class Basket5Blue extends LinearOpMode {
                 .setLinearHeadingInterpolation(pickupSample3.getHeading(), placeSample.getHeading())
                 .build();
 
-        pickupSample4Path = follower.pathBuilder()
-                .addPath(new BezierLine(placeSample, pickupSample4))
-                .setLinearHeadingInterpolation(placeSample.getHeading(), pickupSample4.getHeading())
-                .build();
-
-        scoreSample4 = follower.pathBuilder()
-                .addPath(new BezierLine(pickupSample4, placeSample))
-                .setLinearHeadingInterpolation(pickupSample4.getHeading(), placeSample.getHeading())
-                .build();
+//        pickupSample4Path = follower.pathBuilder()
+//                .addPath(new BezierLine(placeSample, pickupSample4))
+//                .setLinearHeadingInterpolation(placeSample.getHeading(), pickupSample4.getHeading())
+//                .build();
+//
+//        scoreSample4 = follower.pathBuilder()
+//                .addPath(new BezierLine(pickupSample4, placeSample))
+//                .setLinearHeadingInterpolation(pickupSample4.getHeading(), placeSample.getHeading())
+//                .build();
 
         int state = 0;
         int currentPathState = 0; // This is going to be so disgusting later, but I don't care
@@ -93,58 +165,80 @@ public class Basket5Blue extends LinearOpMode {
 
                         break;
                     case 1:
+                        place();
+
                         follower.followPath(pickupSample1Path, true);
                         pathTimer.resetTimer();
                         state = 2;
 
                         break;
                     case 2:
+                        pickup();
+
                         follower.followPath(scoreSample1, true);
                         pathTimer.resetTimer();
                         state = 3;
 
                         break;
                     case 3:
+                        place();
+
                         follower.followPath(pickupSample2Path, true);
                         pathTimer.resetTimer();
                         state = 4;
 
                         break;
                     case 4:
+                        pickup();
+
                         follower.followPath(scoreSample2, true);
                         pathTimer.resetTimer();
                         state = 5;
 
                         break;
                     case 5:
+                        place();
+
                         follower.followPath(pickupSample3Path, true);
                         pathTimer.resetTimer();
                         state = 6;
 
                         break;
                     case 6:
+                        pickup();
+
                         follower.followPath(scoreSample3, true);
                         pathTimer.resetTimer();
-                        state = 7;
+                        state = 9;
 
                         break;
-                    case 7:
-                        follower.followPath(pickupSample4Path, true);
-                        pathTimer.resetTimer();
-                        state = 8;
+//                    case 7:
+//                        place();
+//
+//                        follower.followPath(pickupSample4Path, true);
+//                        pathTimer.resetTimer();
+//                        state = 8;
+//
+//                        break;
+//                    case 8:
+//                        pickup();
+//
+//                        follower.followPath(scoreSample4, true);
+//                        pathTimer.resetTimer();
+//                        state = 9;
+//
+//                        break;
+                    case 9:
+                        place();
 
-                        break;
-                    case 8:
-                        follower.followPath(scoreSample4, true);
-                        pathTimer.resetTimer();
                         state = -1;
-
-                        break;
 
                     default:
                         // KTHXBYE
-                        requestOpModeStop();
+//                        requestOpModeStop();
                 }
+            } else {
+
             }
         }
     }
