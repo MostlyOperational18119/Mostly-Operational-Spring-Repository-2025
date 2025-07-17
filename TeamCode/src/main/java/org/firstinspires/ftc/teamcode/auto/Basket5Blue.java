@@ -22,6 +22,7 @@ public class Basket5Blue extends LinearOpMode {
     Servo outClaw;
     Servo inRotation;
     Servo outRotation;
+    Servo outSwivel;
     DcMotor intakeMotor;
 
     Pose startPose = new Pose(9, 87, Math.toRadians(90));
@@ -33,14 +34,32 @@ public class Basket5Blue extends LinearOpMode {
 
     PathChain scorePreloadedSample, pickupSample1Path, scoreSample1, pickupSample2Path, scoreSample2, pickupSample3Path, scoreSample3;//, pickupSample4Path, scoreSample4;
 
-    private void place() {
-        verticalSlide.setTargetPosition(1600);
+    void slideTo(DcMotor slide, Integer target) {
+        slide.setTargetPosition(target);
 
-        verticalSlide.setPower(1.0);
+        if (slide.getTargetPosition() > target + 10) {
+            slide.setPower(-0.8);
+        } else if (slide.getTargetPosition() < target - 10) {
+            slide.setPower(0.8);
+        } else {
+            slide.setPower(0);
+        }
 
-        while (Math.abs(1600 - verticalSlide.getCurrentPosition()) > 10) {
+        while (Math.abs(target - slide.getCurrentPosition()) > 10) {
             sleep(10);
         }
+    }
+
+    void horizontalSlideTo(Integer target) {
+        slideTo(horizontalSlide, target);
+    }
+
+    void verticalSlideTo(Integer target) {
+        slideTo(verticalSlide, target);
+    }
+
+    private void place() {
+        verticalSlideTo(1600);
 
         outRotation.setPosition(0.29);
 
@@ -50,30 +69,32 @@ public class Basket5Blue extends LinearOpMode {
 
         sleep(100);
 
-        verticalSlide.setTargetPosition(50);
-
-        verticalSlide.setPower(-1.0);
-
-        while (Math.abs(50 - verticalSlide.getCurrentPosition()) > 10) {
-            sleep(10);
-        }
+        verticalSlideTo(50);
     }
 
     private void pickup() {
         inRotation.setPosition(0.57);
         intakeMotor.setPower(1.0);
 
-        horizontalSlide.setTargetPosition(1000);
-
-        horizontalSlide.setPower(0.7);
-
-        while (Math.abs(1000 - horizontalSlide.getCurrentPosition()) > 10) {
-            sleep(10);
-        }
+        horizontalSlideTo(1000);
 
         sleep(100);
 
+        horizontalSlideTo(0);
 
+        outRotation.setPosition(0.98);
+        outSwivel.setPosition(0.17);
+        outClaw.setPosition(0.4);
+
+        sleep(100);
+
+        verticalSlideTo(50);
+
+        outClaw.setPosition(0.51);
+
+        sleep(300);
+
+        verticalSlideTo(500);
     }
 
     @Override
@@ -83,6 +104,7 @@ public class Basket5Blue extends LinearOpMode {
         outClaw = hardwareMap.servo.get("OutClaw");
         inRotation = hardwareMap.servo.get("InRotation");
         outRotation = hardwareMap.servo.get("OutRotation");
+        outSwivel = hardwareMap.servo.get("OutSwivel");
         intakeMotor = hardwareMap.dcMotor.get("intakeMotor");
 
 
