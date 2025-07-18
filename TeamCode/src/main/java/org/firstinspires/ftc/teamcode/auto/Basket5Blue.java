@@ -29,6 +29,7 @@ public class Basket5Blue extends LinearOpMode {
 
     Pose startPose = new Pose(9, 87, Math.toRadians(90));
     Pose placeSample = new Pose(13, 132, Math.toRadians(135)); // 12,128
+    Pose placeSampleBackwards = new Pose(13, 132, Math.toRadians(-45)); // 12,128
     Pose pickupSample1 = new Pose(28, 123, Math.toRadians(0));
     Pose pickupSample2 = new Pose(9, 135, Math.toRadians(0));
     Pose pickupSample3 = new Pose(28, 132, Math.toRadians(45));
@@ -122,9 +123,9 @@ public class Basket5Blue extends LinearOpMode {
         outSwivel.setPosition(0.17);
         outClaw.setPosition(0.15); // Open
 
-        sleep(100);
+        sleep(500);
 
-        verticalSlideTo(50); // Down
+        verticalSlideTo(0); // Down
 
         outClaw.setPosition(0.26); // Close
 
@@ -176,23 +177,23 @@ public class Basket5Blue extends LinearOpMode {
                 .build();
 
         scoreSample1 = follower.pathBuilder()
-                .addPath(new BezierLine(pickupSample1, placeSample))
-                .setLinearHeadingInterpolation(pickupSample1.getHeading(), placeSample.getHeading())
+                .addPath(new BezierLine(pickupSample1, placeSampleBackwards))
+                .setLinearHeadingInterpolation(pickupSample1.getHeading(), placeSampleBackwards.getHeading())
                 .build();
 
         pickupSample2Path = follower.pathBuilder()
-                .addPath(new BezierLine(placeSample, pickupSample2))
-                .setLinearHeadingInterpolation(placeSample.getHeading(), pickupSample2.getHeading())
+                .addPath(new BezierLine(placeSampleBackwards, pickupSample2))
+                .setLinearHeadingInterpolation(placeSampleBackwards.getHeading(), pickupSample2.getHeading())
                 .build();
 
         scoreSample2 = follower.pathBuilder()
-                .addPath(new BezierLine(pickupSample2, placeSample))
-                .setLinearHeadingInterpolation(pickupSample2.getHeading(), placeSample.getHeading())
+                .addPath(new BezierLine(pickupSample2, placeSampleBackwards))
+                .setLinearHeadingInterpolation(pickupSample2.getHeading(), placeSampleBackwards.getHeading())
                 .build();
 
         pickupSample3Path = follower.pathBuilder()
-                .addPath(new BezierLine(placeSample, pickupSample3))
-                .setLinearHeadingInterpolation(placeSample.getHeading(), pickupSample3.getHeading())
+                .addPath(new BezierLine(placeSampleBackwards, pickupSample3))
+                .setLinearHeadingInterpolation(placeSampleBackwards.getHeading(), pickupSample3.getHeading())
                 .build();
 
         scoreSample3 = follower.pathBuilder()
