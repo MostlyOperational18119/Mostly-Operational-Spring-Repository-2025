@@ -9,7 +9,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 public class MotorTester extends LinearOpMode {
     @Override
     public void runOpMode() {
-        DcMotor horSlide = hardwareMap.get(DcMotor.class, "horizontalSlide");
+        DcMotor horSlide = hardwareMap.get(DcMotor.class, "verticalSlide");
         horSlide.setTargetPosition(0);
         horSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         horSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);

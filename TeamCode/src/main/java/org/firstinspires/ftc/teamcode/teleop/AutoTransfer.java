@@ -22,9 +22,9 @@ public class AutoTransfer {
     public void horizontalSlideTo(DcMotor slide, Integer target) {
         slide.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         if (slide.getCurrentPosition() > target + 10) {
-            slide.setPower(-0.2);
+            slide.setPower(-1.0);
         } else if (slide.getCurrentPosition() < target - 10) {
-            slide.setPower(0.2);
+            slide.setPower(1.0);
         } else {
             slide.setPower(0);
         }
@@ -63,7 +63,7 @@ public class AutoTransfer {
         inStop = hardwareMap.get(Servo.class, "InStop");
     }
 
-    public void startTransfer(double outPosition) {
+    public void start(double outPosition) {
         if (currentState == State.DONE) {
             currentState = State.RESET_SLIDES;
             stateStartTime = System.currentTimeMillis();
@@ -80,37 +80,40 @@ public class AutoTransfer {
                 verticalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 verticalSlide.setPower(0.5);
                 outSwivel.setPosition(0.17);
-                outRotation.setPosition(0.98);
-                outClaw.setPosition(0.4);
+                outRotation.setPosition(0.96);
+                outClaw.setPosition(0.06);
                 inRotation.setPosition(0.04);
-//                horizontalSlide.setTargetPosition(0);
-//                horizontalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-//                horizontalSlide.setPower(1);
                 horizontalSlideTo(horizontalSlide,0);
                 intakeMotor.setPower(1);
-                inStop.setPosition(0.37);
 //                telemetry.addData("should switch continue", verticalSlide.getCurrentPosition() <= 100 && horizontalSlide.getCurrentPosition() <= 100);
                 if (verticalSlide.getCurrentPosition() <= 100 && horizontalSlide.getCurrentPosition() <= 100) {
                     if (!hasReset) {
                         hasReset = true;
                         stateStartTime = System.currentTimeMillis();
+                        inStop.setPosition(0.37);
                     }
 //                    telemetry.addData("elapsed", elapsed);
-                    if (elapsed > 1000) {
+                    if (elapsed > 1200) {
+                        hasReset = false;
                         currentState = State.CLOSE_OUT_CLAW;
+                        stateStartTime = System.currentTimeMillis();
                     }
                 }
                 break;
             case CLOSE_OUT_CLAW:
-                outClaw.setPosition(0.51);
+                if (!hasReset) {
+                    hasReset = true;
+                    outClaw.setPosition(0.18);
+                }
                 if (elapsed > 600) {
+                    hasReset = false;
                     currentState = State.LIFT_VERT_SLIDE;
                     stateStartTime = System.currentTimeMillis();
                     intakeMotor.setPower(0);
                 }
                 break;
             case LIFT_VERT_SLIDE:
-                verticalSlide.setTargetPosition(1600); // set your target height
+                verticalSlide.setTargetPosition(1950); // set your target height
                 verticalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 verticalSlide.setPower(0.5);
                 if (elapsed > 500) {
@@ -125,7 +128,8 @@ public class AutoTransfer {
                 break;
 
             case DONE:
-                // Optional: reset if needed
+                horizontalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                verticalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
                 break;
         }
     }

@@ -10,18 +10,14 @@ public class ServoTester extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         double Position = 0;
-        Gamepad currentGamepad1 = new Gamepad();
-        Gamepad previousGamepad1 = new Gamepad();
-        Servo dropperServo = hardwareMap.servo.get("InStop");
+        Servo dropperServo = hardwareMap.servo.get("OutClaw");
 
         waitForStart();
         while (opModeIsActive()) {
-            previousGamepad1.copy(currentGamepad1);
-            currentGamepad1.copy(gamepad1);
-            if (gamepad1.a && !previousGamepad1.a) {
+            if (gamepad1.aWasPressed())     {
                 Position += 0.01;
             }
-            if (gamepad1.b && !previousGamepad1.b) {
+            if (gamepad1.bWasPressed()) {
                 Position -= 0.01;
             }
 
@@ -31,8 +27,9 @@ public class ServoTester extends LinearOpMode {
         }
     }
 }
-
 //outswivel: 0.17
 //outrotation: 1
 //0.57 inRotation down
 //0.04 inRotation up
+//0.18 InSwivel
+//0.84
