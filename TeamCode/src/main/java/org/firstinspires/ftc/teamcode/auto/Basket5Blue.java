@@ -41,9 +41,9 @@ public class Basket5Blue extends LinearOpMode {
         slide.setTargetPosition(target);
 
         if (slide.getCurrentPosition() > target + 10) {
-            slide.setPower(-0.8);
+            slide.setPower(-1.0);
         } else if (slide.getCurrentPosition() < target - 10) { // Claw: 0.15 open, 0.26 closed
-            slide.setPower(0.8);
+            slide.setPower(1.0);
         } else {
             return;
         }
@@ -115,7 +115,7 @@ public class Basket5Blue extends LinearOpMode {
 
         sleep(500);
 
-        inRotation.setPosition(0.04);
+        inRotation.setPosition(0.0); // Rotate back to slide sample to claw :D
 
         sleep(500);
 
@@ -127,11 +127,13 @@ public class Basket5Blue extends LinearOpMode {
 
         verticalSlideTo(0); // Down
 
+        sleep(100);
+
         outClaw.setPosition(0.26); // Close
 
         intakeMotor.setPower(0.0);
 
-        sleep(300);
+        sleep(500);
 
         verticalSlideTo(500); // Kinda up
     }
