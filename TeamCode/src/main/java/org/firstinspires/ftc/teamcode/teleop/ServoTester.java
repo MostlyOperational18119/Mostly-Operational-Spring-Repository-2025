@@ -14,7 +14,7 @@ public class ServoTester extends LinearOpMode {
 
         waitForStart();
         while (opModeIsActive()) {
-            if (gamepad1.aWasPressed())     {
+            if (gamepad1.aWasPressed()) {
                 Position += 0.01;
             }
             if (gamepad1.bWasPressed()) {

@@ -55,7 +55,7 @@ public class Place {
             case RELEASE:
                 if (!hasReset) {
                     hasReset = true;
-                    outClaw.setPosition(0.06);
+                    outClaw.setPosition(0.15);
                 }
                 hasReset = false;
                 currentState = State.DONE;

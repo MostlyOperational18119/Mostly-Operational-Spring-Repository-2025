@@ -81,7 +81,7 @@ public class AutoTransfer {
                 verticalSlide.setPower(0.5);
                 outSwivel.setPosition(0.17);
                 outRotation.setPosition(0.96);
-                outClaw.setPosition(0.06);
+                outClaw.setPosition(0.15);
                 inRotation.setPosition(0.04);
                 horizontalSlideTo(horizontalSlide,0);
                 intakeMotor.setPower(1);
@@ -103,7 +103,7 @@ public class AutoTransfer {
             case CLOSE_OUT_CLAW:
                 if (!hasReset) {
                     hasReset = true;
-                    outClaw.setPosition(0.18);
+                    outClaw.setPosition(0.26);
                 }
                 if (elapsed > 600) {
                     hasReset = false;

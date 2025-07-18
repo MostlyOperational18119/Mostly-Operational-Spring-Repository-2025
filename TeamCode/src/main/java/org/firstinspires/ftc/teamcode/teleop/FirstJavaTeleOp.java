@@ -226,10 +226,10 @@ public class FirstJavaTeleOp extends LinearOpMode {
 
             if (gamepad2.rightBumperWasPressed()) {
                 if (!Open) {
-                    outClaw.setPosition(0.18);
+                    outClaw.setPosition(0.26);
                     Open = true;
                 } else {
-                    outClaw.setPosition(0.06);
+                    outClaw.setPosition(0.15);
                     Open = false;
                 }
             }
