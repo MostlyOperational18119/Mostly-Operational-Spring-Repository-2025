@@ -24,12 +24,13 @@ public class Basket5Blue extends LinearOpMode {
     Servo outRotation;
     Servo outSwivel;
     DcMotor intakeMotor;
+    Follower follower;
 
     Pose startPose = new Pose(9, 87, Math.toRadians(90));
-    Pose placeSample = new Pose(9, 135, Math.toRadians(135));
-    Pose pickupSample1 = new Pose(28, 120, Math.toRadians(180));
-    Pose pickupSample2 = new Pose(9, 135, Math.toRadians(180));
-    Pose pickupSample3 = new Pose(28, 132, Math.toRadians(225));
+    Pose placeSample = new Pose(13, 132, Math.toRadians(135)); // 12,128
+    Pose pickupSample1 = new Pose(28, 123, Math.toRadians(0));
+    Pose pickupSample2 = new Pose(9, 135, Math.toRadians(0));
+    Pose pickupSample3 = new Pose(28, 132, Math.toRadians(45));
 //    Pose pickupSample4 = new Pose(28, 121.5, Math.toRadians(180));
 
     PathChain scorePreloadedSample, pickupSample1Path, scoreSample1, pickupSample2Path, scoreSample2, pickupSample3Path, scoreSample3;//, pickupSample4Path, scoreSample4;
@@ -37,16 +38,21 @@ public class Basket5Blue extends LinearOpMode {
     void slideTo(DcMotor slide, Integer target) {
         slide.setTargetPosition(target);
 
-        if (slide.getTargetPosition() > target + 10) {
+        if (slide.getCurrentPosition() > target + 10) {
             slide.setPower(-0.8);
-        } else if (slide.getTargetPosition() < target - 10) {
+        } else if (slide.getCurrentPosition() < target - 10) { // Claw: 0.15 open, 0.26 closed
             slide.setPower(0.8);
         } else {
-            slide.setPower(0);
+            return;
         }
 
         while (Math.abs(target - slide.getCurrentPosition()) > 10) {
+            follower.update();
             sleep(10);
+
+            telemetry.addData("Target", target);
+            telemetry.addData("Current", slide.getCurrentPosition());
+            telemetry.update();
         }
     }
 
@@ -58,43 +64,66 @@ public class Basket5Blue extends LinearOpMode {
         slideTo(verticalSlide, target);
     }
 
+    private void placePart1() {
+        verticalSlideTo(1600); // Up
+
+        outRotation.setPosition(0.62); // Point towards the basket
+    }
+
+    private void placePart2() {
+        outClaw.setPosition(0.15); // Open
+
+        sleep(1000);
+
+        outClaw.setPosition(0.26); // Close
+
+        verticalSlideTo(50); // Down
+    }
+
     private void place() {
-        verticalSlideTo(1600);
+        verticalSlideTo(1600); // Up
 
-        outRotation.setPosition(0.29);
+        outRotation.setPosition(0.62); // Point towards the basket
 
-        sleep(500);
+        sleep(300);
 
-        outClaw.setPosition(0.4);
+        outClaw.setPosition(0.15); // Open
 
-        sleep(100);
+        sleep(1000);
 
-        verticalSlideTo(50);
+        outClaw.setPosition(0.26); // Close
+
+        verticalSlideTo(50); // Down
     }
 
     private void pickup() {
         inRotation.setPosition(0.57);
+
+        sleep(400);
+
         intakeMotor.setPower(1.0);
 
-        horizontalSlideTo(1000);
+        sleep(400);
 
-        sleep(100);
+        horizontalSlideTo(400); // Extend to grab sample
 
-        horizontalSlideTo(0);
+        sleep(200);
 
-        outRotation.setPosition(0.98);
+        horizontalSlideTo(0); // Retract after grabbing it
+
+        outRotation.setPosition(0.98); // Point claw down
         outSwivel.setPosition(0.17);
-        outClaw.setPosition(0.4);
+        outClaw.setPosition(0.15); // Open
 
         sleep(100);
 
-        verticalSlideTo(50);
+        verticalSlideTo(50); // Down
 
-        outClaw.setPosition(0.51);
+        outClaw.setPosition(0.26); // Close
 
         sleep(300);
 
-        verticalSlideTo(500);
+        verticalSlideTo(500); // Kinda up
     }
 
     @Override
@@ -107,6 +136,7 @@ public class Basket5Blue extends LinearOpMode {
         outSwivel = hardwareMap.servo.get("OutSwivel");
         intakeMotor = hardwareMap.dcMotor.get("intakeMotor");
 
+        outClaw.setPosition(0.26); // Close
 
         verticalSlide.setTargetPosition(0);
         verticalSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -120,7 +150,7 @@ public class Basket5Blue extends LinearOpMode {
 
         Timer pathTimer = new Timer();
         Constants.setConstants(FConstants.class, LConstants.class);
-        Follower follower = new Follower(hardwareMap, FConstants.class, LConstants.class);
+        follower = new Follower(hardwareMap, FConstants.class, LConstants.class);
         follower.setStartingPose(startPose);
 
 
@@ -178,16 +208,20 @@ public class Basket5Blue extends LinearOpMode {
         while (opModeIsActive()) {
             follower.update();
 
+            telemetry.addData("State: ", state);
+
             if (!follower.isBusy()) {
                 switch (state) {
                     case 0:
-                        follower.followPath(scorePreloadedSample, true);
+                        placePart1();
+
+                        follower.followPath(scorePreloadedSample, 0.75, true);
                         pathTimer.resetTimer();
                         state = 1;
 
                         break;
                     case 1:
-                        place();
+                        placePart2();
 
                         follower.followPath(pickupSample1Path, true);
                         pathTimer.resetTimer();
@@ -252,16 +286,19 @@ public class Basket5Blue extends LinearOpMode {
 //                        break;
                     case 9:
                         place();
+                        pathTimer.resetTimer();
 
                         state = -1;
 
                     default:
                         // KTHXBYE
-//                        requestOpModeStop();
+                        requestOpModeStop();
                 }
             } else {
-
+                sleep(100);
             }
+
+            telemetry.update();
         }
     }
 }
