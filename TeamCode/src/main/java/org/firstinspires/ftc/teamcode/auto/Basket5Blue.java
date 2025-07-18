@@ -21,6 +21,7 @@ public class Basket5Blue extends LinearOpMode {
     DcMotor horizontalSlide;
     Servo outClaw;
     Servo inRotation;
+    Servo inStop;
     Servo outRotation;
     Servo outSwivel;
     DcMotor intakeMotor;
@@ -65,7 +66,7 @@ public class Basket5Blue extends LinearOpMode {
     }
 
     private void placePart1() {
-        verticalSlideTo(1600); // Up
+        verticalSlideTo(1800); // Up
 
         outRotation.setPosition(0.62); // Point towards the basket
     }
@@ -77,23 +78,21 @@ public class Basket5Blue extends LinearOpMode {
 
         outClaw.setPosition(0.26); // Close
 
-        verticalSlideTo(50); // Down
+        sleep(500);
+
+        outRotation.setPosition(0.45); // Point claw up
+
+        sleep(500);
+
+        verticalSlideTo(500); // Down
     }
 
     private void place() {
-        verticalSlideTo(1600); // Up
-
-        outRotation.setPosition(0.62); // Point towards the basket
-
-        sleep(300);
-
-        outClaw.setPosition(0.15); // Open
+        placePart1();
 
         sleep(1000);
 
-        outClaw.setPosition(0.26); // Close
-
-        verticalSlideTo(50); // Down
+        placePart2();
     }
 
     private void pickup() {
@@ -109,7 +108,15 @@ public class Basket5Blue extends LinearOpMode {
 
         sleep(200);
 
+        inStop.setPosition(0.37);
+
         horizontalSlideTo(0); // Retract after grabbing it
+
+        sleep(500);
+
+        inRotation.setPosition(0.04);
+
+        sleep(500);
 
         outRotation.setPosition(0.98); // Point claw down
         outSwivel.setPosition(0.17);
@@ -120,6 +127,8 @@ public class Basket5Blue extends LinearOpMode {
         verticalSlideTo(50); // Down
 
         outClaw.setPosition(0.26); // Close
+
+        intakeMotor.setPower(0.0);
 
         sleep(300);
 
@@ -132,6 +141,7 @@ public class Basket5Blue extends LinearOpMode {
         horizontalSlide = hardwareMap.dcMotor.get("horizontalSlide");
         outClaw = hardwareMap.servo.get("OutClaw");
         inRotation = hardwareMap.servo.get("InRotation");
+        inStop = hardwareMap.servo.get("InStop");
         outRotation = hardwareMap.servo.get("OutRotation");
         outSwivel = hardwareMap.servo.get("OutSwivel");
         intakeMotor = hardwareMap.dcMotor.get("intakeMotor");
@@ -230,6 +240,7 @@ public class Basket5Blue extends LinearOpMode {
                         break;
                     case 2:
                         pickup();
+                        placePart1();
 
                         follower.followPath(scoreSample1, true);
                         pathTimer.resetTimer();
@@ -237,7 +248,7 @@ public class Basket5Blue extends LinearOpMode {
 
                         break;
                     case 3:
-                        place();
+                        placePart2();
 
                         follower.followPath(pickupSample2Path, true);
                         pathTimer.resetTimer();
@@ -246,6 +257,7 @@ public class Basket5Blue extends LinearOpMode {
                         break;
                     case 4:
                         pickup();
+                        placePart1();
 
                         follower.followPath(scoreSample2, true);
                         pathTimer.resetTimer();
@@ -253,7 +265,7 @@ public class Basket5Blue extends LinearOpMode {
 
                         break;
                     case 5:
-                        place();
+                        placePart2();
 
                         follower.followPath(pickupSample3Path, true);
                         pathTimer.resetTimer();
@@ -262,6 +274,7 @@ public class Basket5Blue extends LinearOpMode {
                         break;
                     case 6:
                         pickup();
+                        placePart1();
 
                         follower.followPath(scoreSample3, true);
                         pathTimer.resetTimer();
@@ -285,7 +298,7 @@ public class Basket5Blue extends LinearOpMode {
 //
 //                        break;
                     case 9:
-                        place();
+                        placePart2();
                         pathTimer.resetTimer();
 
                         state = -1;
