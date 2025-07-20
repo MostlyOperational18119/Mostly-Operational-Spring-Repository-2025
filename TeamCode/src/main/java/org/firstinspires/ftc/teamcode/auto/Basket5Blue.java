@@ -27,15 +27,18 @@ public class Basket5Blue extends LinearOpMode {
     DcMotor intakeMotor;
     Follower follower;
 
-    Pose startPose = new Pose(9, 87, Math.toRadians(90));
-    Pose placeSample = new Pose(13, 132, Math.toRadians(135)); // 12,128
-    Pose placeSampleBackwards = new Pose(13, 132, Math.toRadians(-45)); // 12,128
-    Pose pickupSample1 = new Pose(28, 123, Math.toRadians(0));
-    Pose pickupSample2 = new Pose(9, 135, Math.toRadians(0));
-    Pose pickupSample3 = new Pose(28, 132, Math.toRadians(45));
+    Pose startPose = new Pose(9, 87, Math.toRadians(-90));
+    Pose placeSample = new Pose(11.5, 130, Math.toRadians(-48)); // 12,128
+    Pose placeSample2 = new Pose(11.5, 130, Math.toRadians(-48));
+    Pose pickupSample1 = new Pose(22, 122.5, Math.toRadians(0));
+    Pose shimmySample1 = new Pose(22, 123.5, Math.toRadians(12));
+    Pose pickupSample2 = new Pose(22, 130.5, Math.toRadians(0));
+    Pose shimmySample2 = new Pose(22, 131.5, Math.toRadians(12));
+
+    boolean actionStarted = false;
 //    Pose pickupSample4 = new Pose(28, 121.5, Math.toRadians(180));
 
-    PathChain scorePreloadedSample, pickupSample1Path, scoreSample1, pickupSample2Path, scoreSample2, pickupSample3Path, scoreSample3;//, pickupSample4Path, scoreSample4;
+    PathChain scorePreloadedSample, pickupSample1Path, shimmySample1Path, shimmyBackSample1Path, scoreSample1, pickupSample2Path, shimmySample2Path, shimmyBackSample2Path, scoreSample2, pickupSample3Path, scoreSample3;//, pickupSample4Path, scoreSample4;
 
     void slideTo(DcMotor slide, Integer target) {
         slide.setTargetPosition(target);
@@ -58,6 +61,15 @@ public class Basket5Blue extends LinearOpMode {
         }
     }
 
+    private void waitWithFollowerUpdate(long millis) {
+        long start = System.currentTimeMillis();
+        while (opModeIsActive() && System.currentTimeMillis() - start < millis) {
+            follower.update();
+            telemetry.update();
+            sleep(10);
+        }
+    }
+
     void horizontalSlideTo(Integer target) {
         slideTo(horizontalSlide, target);
     }
@@ -69,73 +81,62 @@ public class Basket5Blue extends LinearOpMode {
     private void placePart1() {
         verticalSlideTo(1800); // Up
 
-        outRotation.setPosition(0.62); // Point towards the basket
+        outRotation.setPosition(0.29); // Point towards the basket
+    }
+
+    private void asyncPlacePart1() {
+        new Thread(this::placePart1).start();
     }
 
     private void placePart2() {
         outClaw.setPosition(0.15); // Open
 
-        sleep(1000);
+        sleep(350);
 
         outClaw.setPosition(0.26); // Close
-
-        sleep(500);
-
         outRotation.setPosition(0.45); // Point claw up
 
-        sleep(500);
+        sleep(300);
 
         verticalSlideTo(500); // Down
     }
 
-    private void place() {
-        placePart1();
-
-        sleep(1000);
-
-        placePart2();
-    }
-
     private void pickup() {
-        inRotation.setPosition(0.57);
-
-        sleep(400);
-
+        inStop.setPosition(0.86);
+        inRotation.setPosition(0.89);
         intakeMotor.setPower(1.0);
 
-        sleep(400);
+        sleep(750);
 
-        horizontalSlideTo(400); // Extend to grab sample
 
-        sleep(200);
+        horizontalSlideTo(600); // Extend to grab sample
 
-        inStop.setPosition(0.37);
+        sleep(300);
+    }
 
+    private void transfer() {
         horizontalSlideTo(0); // Retract after grabbing it
 
-        sleep(500);
+        sleep(300);
 
-        inRotation.setPosition(0.0); // Rotate back to slide sample to claw :D
-
-        sleep(500);
-
-        outRotation.setPosition(0.98); // Point claw down
+        inRotation.setPosition(0.25); // Rotate back to slide sample to claw :D
+        inStop.setPosition(0.37);
+        outRotation.setPosition(0.97); // Point claw down
         outSwivel.setPosition(0.17);
         outClaw.setPosition(0.15); // Open
 
-        sleep(500);
+        sleep(200);
 
         verticalSlideTo(0); // Down
 
-        sleep(100);
+        sleep(400);
 
         outClaw.setPosition(0.26); // Close
-
-        intakeMotor.setPower(0.0);
-
-        sleep(500);
-
-        verticalSlideTo(500); // Kinda up
+        waitWithFollowerUpdate(200); // Wait while still updating follower
+        new Thread(() -> {
+            intakeMotor.setPower(0.0);
+            inStop.setPosition(0.86);
+        }).start();
     }
 
     @Override
@@ -178,29 +179,39 @@ public class Basket5Blue extends LinearOpMode {
                 .setLinearHeadingInterpolation(placeSample.getHeading(), pickupSample1.getHeading())
                 .build();
 
+        shimmySample1Path = follower.pathBuilder()
+                .addPath(new BezierLine(pickupSample1, shimmySample1))
+                .setLinearHeadingInterpolation(pickupSample1.getHeading(), shimmySample1.getHeading())
+                .build();
+
+        shimmyBackSample1Path = follower.pathBuilder()
+                .addPath(new BezierLine(shimmySample1, pickupSample1))
+                .setLinearHeadingInterpolation(shimmySample1.getHeading(), pickupSample1.getHeading())
+                .build();
+
         scoreSample1 = follower.pathBuilder()
-                .addPath(new BezierLine(pickupSample1, placeSampleBackwards))
-                .setLinearHeadingInterpolation(pickupSample1.getHeading(), placeSampleBackwards.getHeading())
+                .addPath(new BezierLine(shimmySample1, placeSample))
+                .setLinearHeadingInterpolation(shimmySample1.getHeading(), placeSample.getHeading())
                 .build();
 
         pickupSample2Path = follower.pathBuilder()
-                .addPath(new BezierLine(placeSampleBackwards, pickupSample2))
-                .setLinearHeadingInterpolation(placeSampleBackwards.getHeading(), pickupSample2.getHeading())
+                .addPath(new BezierLine(placeSample, pickupSample2))
+                .setLinearHeadingInterpolation(placeSample.getHeading(), pickupSample2.getHeading())
+                .build();
+
+        shimmySample2Path = follower.pathBuilder()
+                .addPath(new BezierLine(pickupSample2, shimmySample2))
+                .setLinearHeadingInterpolation(pickupSample2.getHeading(), shimmySample2.getHeading())
+                .build();
+
+        shimmyBackSample2Path = follower.pathBuilder()
+                .addPath(new BezierLine(shimmySample2, pickupSample2))
+                .setLinearHeadingInterpolation(shimmySample2.getHeading(), pickupSample2.getHeading())
                 .build();
 
         scoreSample2 = follower.pathBuilder()
-                .addPath(new BezierLine(pickupSample2, placeSampleBackwards))
-                .setLinearHeadingInterpolation(pickupSample2.getHeading(), placeSampleBackwards.getHeading())
-                .build();
-
-        pickupSample3Path = follower.pathBuilder()
-                .addPath(new BezierLine(placeSampleBackwards, pickupSample3))
-                .setLinearHeadingInterpolation(placeSampleBackwards.getHeading(), pickupSample3.getHeading())
-                .build();
-
-        scoreSample3 = follower.pathBuilder()
-                .addPath(new BezierLine(pickupSample3, placeSample))
-                .setLinearHeadingInterpolation(pickupSample3.getHeading(), placeSample.getHeading())
+                .addPath(new BezierLine(shimmySample2, placeSample2))
+                .setLinearHeadingInterpolation(shimmySample2.getHeading(), placeSample2.getHeading())
                 .build();
 
 //        pickupSample4Path = follower.pathBuilder()
@@ -222,12 +233,12 @@ public class Basket5Blue extends LinearOpMode {
             follower.update();
 
             telemetry.addData("State: ", state);
+            telemetry.addData("isbusy", follower.isBusy());
 
-            if (!follower.isBusy()) {
+            if (!follower.isBusy()) { //this sucks
                 switch (state) {
                     case 0:
-                        placePart1();
-
+                        asyncPlacePart1();
                         follower.followPath(scorePreloadedSample, 0.75, true);
                         pathTimer.resetTimer();
                         state = 1;
@@ -243,12 +254,23 @@ public class Basket5Blue extends LinearOpMode {
                         break;
                     case 2:
                         pickup();
-                        placePart1();
+                        follower.followPath(shimmySample1Path);
+                        pathTimer.resetTimer();
+                        state = 22; // New intermediate state
+                        break;
 
+                    case 21:
+                        follower.followPath(shimmyBackSample1Path);
+                        pathTimer.resetTimer();
+                        state = 22; // Another intermediate state
+                        break;
+
+                    case 22:
+                        transfer();
+                        placePart1();
                         follower.followPath(scoreSample1, true);
                         pathTimer.resetTimer();
                         state = 3;
-
                         break;
                     case 3:
                         placePart2();
@@ -260,28 +282,22 @@ public class Basket5Blue extends LinearOpMode {
                         break;
                     case 4:
                         pickup();
+                        follower.followPath(shimmySample2Path);
+                        pathTimer.resetTimer();
+                        state = 42; // New intermediate state
+                        break;
+                    case 41:
+                        follower.followPath(shimmyBackSample2Path);
+                        pathTimer.resetTimer();
+                        state = 42;
+                        break;
+                    case 42:
+                        transfer();
                         placePart1();
 
                         follower.followPath(scoreSample2, true);
                         pathTimer.resetTimer();
                         state = 5;
-
-                        break;
-                    case 5:
-                        placePart2();
-
-                        follower.followPath(pickupSample3Path, true);
-                        pathTimer.resetTimer();
-                        state = 6;
-
-                        break;
-                    case 6:
-                        pickup();
-                        placePart1();
-
-                        follower.followPath(scoreSample3, true);
-                        pathTimer.resetTimer();
-                        state = 9;
 
                         break;
 //                    case 7:
@@ -300,8 +316,14 @@ public class Basket5Blue extends LinearOpMode {
 //                        state = 9;
 //
 //                        break;
-                    case 9:
+                    case 5:
                         placePart2();
+                        outRotation.setPosition(0.97);
+                        sleep(250);
+                        verticalSlideTo(0);
+                        state = 6;
+                        break;
+                    case 6:
                         pathTimer.resetTimer();
 
                         state = -1;

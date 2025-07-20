@@ -107,7 +107,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
 
         Servo inRotation = hardwareMap.servo.get("InRotation");
         Servo outRotation = hardwareMap.servo.get("OutRotation");
-        inRotation.setPosition(0.57);
+        inRotation.setPosition(0.89);
         Servo outClaw = hardwareMap.get(Servo.class, "OutClaw");
         Servo inStop = hardwareMap.get(Servo.class, "InStop");
 
@@ -194,10 +194,10 @@ public class FirstJavaTeleOp extends LinearOpMode {
 
             if (gunnerRightTrigger > 0) {
                 intakeMotor.setPower(gunnerRightTrigger);
-                inRotation.setPosition(0.57);
+                inRotation.setPosition(0.89);
             } else if (gunnerLeftTrigger > 0) {
                 intakeMotor.setPower(-gunnerLeftTrigger);
-                inRotation.setPosition(0.57);
+                inRotation.setPosition(0.89);
             } else {
                 intakeMotor.setPower(0);
             }
@@ -217,9 +217,9 @@ public class FirstJavaTeleOp extends LinearOpMode {
 
             if (gamepad2.yWasPressed()) {
                 if (IntakeUp) {
-                    inRotation.setPosition(0.04);
+                    inRotation.setPosition(0.25);
                 } else {
-                    inRotation.setPosition(0.57);
+                    inRotation.setPosition(0.89);
                 }
                 IntakeUp = !IntakeUp;
             }
