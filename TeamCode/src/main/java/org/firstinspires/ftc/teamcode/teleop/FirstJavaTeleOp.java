@@ -107,7 +107,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
 
         Servo inRotation = hardwareMap.servo.get("InRotation");
         Servo outRotation = hardwareMap.servo.get("OutRotation");
-        inRotation.setPosition(0.89);
+        inRotation.setPosition(0.1);
         Servo outClaw = hardwareMap.get(Servo.class, "OutClaw");
         Servo inStop = hardwareMap.get(Servo.class, "InStop");
 

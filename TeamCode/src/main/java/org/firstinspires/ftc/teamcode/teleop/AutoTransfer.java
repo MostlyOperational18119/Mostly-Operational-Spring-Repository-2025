@@ -30,6 +30,45 @@ public class AutoTransfer {
         }
     }
 
+    void slideTo(DcMotor slide, Integer target) {
+        slide.setTargetPosition(target);
+
+        if (slide.getCurrentPosition() > target + 10) {
+            slide.setPower(-1.0);
+        } else if (slide.getCurrentPosition() < target - 10) { // Claw: 0.15 open, 0.26 closed
+            slide.setPower(1.0);
+        } else {
+            return;
+        }
+    }
+
+    public void verticalSlideTo(DcMotorEx slide, Integer target) {
+        double P;
+        double D;
+        double feedforward;
+
+        double error = target - slide.getCurrentPosition();
+
+        if (slide.getCurrentPosition() > target) {
+            P = 0.004;
+            D = 0.0;
+            if (Math.abs(error) < 50) {
+                feedforward = 0.0;
+            } else {
+                feedforward = 0.11;
+            }
+        } else {
+            P = 0.03;
+            D = 0.0002;
+            feedforward = 0.0;
+        }
+
+        double derivative = -slide.getVelocity();
+        double verticalPower = P * (target - slide.getCurrentPosition()) + D * derivative;
+
+        slide.setPower(verticalPower + feedforward);
+    }
+
     private State currentState = State.DONE;
     private long stateStartTime;
     private long horRetractTime;
@@ -44,6 +83,7 @@ public class AutoTransfer {
     private final Servo inStop;
     private final Telemetry telemetry;
     private boolean hasReset = false;
+    private boolean hasReset2 = false;
 
     private double outPosition;
 
@@ -76,15 +116,13 @@ public class AutoTransfer {
 
         switch (currentState) {
             case RESET_SLIDES:
-                verticalSlide.setTargetPosition(0);
-                verticalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                verticalSlide.setPower(0.5);
-                outSwivel.setPosition(0.17);
-                outRotation.setPosition(0.96);
-                outClaw.setPosition(0.15);
-                inRotation.setPosition(0.04);
-                horizontalSlideTo(horizontalSlide,0);
-                intakeMotor.setPower(1);
+
+                    outSwivel.setPosition(0.85); //previously 0.17
+                    outRotation.setPosition(0.96);
+                    outClaw.setPosition(0.15);
+                    inRotation.setPosition(0.3);
+                    horizontalSlideTo(horizontalSlide,0);
+                    intakeMotor.setPower(1);
 //                telemetry.addData("should switch continue", verticalSlide.getCurrentPosition() <= 100 && horizontalSlide.getCurrentPosition() <= 100);
                 if (verticalSlide.getCurrentPosition() <= 100 && horizontalSlide.getCurrentPosition() <= 100) {
                     if (!hasReset) {
@@ -93,7 +131,7 @@ public class AutoTransfer {
                         inStop.setPosition(0.37);
                     }
 //                    telemetry.addData("elapsed", elapsed);
-                    if (elapsed > 1200) {
+                    if (elapsed > 1600) {
                         hasReset = false;
                         currentState = State.CLOSE_OUT_CLAW;
                         stateStartTime = System.currentTimeMillis();
@@ -101,21 +139,17 @@ public class AutoTransfer {
                 }
                 break;
             case CLOSE_OUT_CLAW:
-                if (!hasReset) {
-                    hasReset = true;
                     outClaw.setPosition(0.26);
-                }
-                if (elapsed > 600) {
-                    hasReset = false;
+                if (elapsed > 1000) {
                     currentState = State.LIFT_VERT_SLIDE;
                     stateStartTime = System.currentTimeMillis();
                     intakeMotor.setPower(0);
                 }
                 break;
             case LIFT_VERT_SLIDE:
-                verticalSlide.setTargetPosition(1950); // set your target height
-                verticalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                verticalSlide.setPower(0.5);
+                    verticalSlide.setTargetPosition(1950); // set your target height
+                    //verticalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                    //verticalSlide.setPower(0.5);
                 if (elapsed > 500) {
                     currentState = State.ROTATE_OUT_ARM;
                     stateStartTime = System.currentTimeMillis();
