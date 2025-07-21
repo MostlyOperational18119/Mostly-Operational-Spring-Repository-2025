@@ -15,7 +15,7 @@ import org.firstinspires.ftc.teamcode.pedro.FConstants;
 import org.firstinspires.ftc.teamcode.pedro.LConstants;
 
 @SuppressWarnings("unused")
-@Autonomous(name = "Basket 5 Blue Auto")
+@Autonomous(name = "Basket Auto")
 public class Basket5Blue extends LinearOpMode {
     DcMotor verticalSlide;
     DcMotor horizontalSlide;
