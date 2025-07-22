@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.teleop;
 
+import android.graphics.Path;
+
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLStatus;
@@ -110,6 +112,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
         inRotation.setPosition(0.1);
         Servo outClaw = hardwareMap.get(Servo.class, "OutClaw");
         Servo inStop = hardwareMap.get(Servo.class, "InStop");
+        Servo outSwivel = hardwareMap.get(Servo.class, "OutSwivel");
 
         motorFL.setDirection(DcMotorSimple.Direction.REVERSE);
         motorBL.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -127,12 +130,14 @@ public class FirstJavaTeleOp extends LinearOpMode {
         float driverRightX;
 
         float gunnerLeftY;
+        float gunnerRightY;
         float gunnerRightTrigger;
         float gunnerLeftTrigger;
         boolean gunnerLB;
         double speedDiv = 1.0;
         double currentSide = 0.29;
         double outPosition = 0.96;
+        double MoveMulti = 1;
         long startTime = 0;
         int vertTarget = 0;
         int horizontalTarget = 0;
@@ -150,11 +155,12 @@ public class FirstJavaTeleOp extends LinearOpMode {
         while (opModeIsActive()) {
             pinpoint.update();
 
-            driverLeftX = gamepad1.left_stick_x;
+            driverLeftX = (float) (gamepad1.left_stick_x * MoveMulti);
             driverLeftY = -gamepad1.left_stick_y;
             driverRightX = gamepad1.right_stick_x;
 
             gunnerLeftY = gamepad2.left_stick_y;
+            gunnerRightY = gamepad2.right_stick_y;
             gunnerLB = gamepad2.left_bumper;
             gunnerRightTrigger = gamepad2.right_trigger;
             gunnerLeftTrigger = gamepad2.left_trigger;
@@ -168,28 +174,27 @@ public class FirstJavaTeleOp extends LinearOpMode {
                 telemetry.addLine("Warning: LimeLight output is null");
             }
 
-            motorFL.setPower(Math.atan(1.12*(driverLeftY + driverLeftX + driverRightX)) / speedDiv);
-            motorFR.setPower(Math.atan(1.12*(driverLeftY - driverLeftX - driverRightX)) / speedDiv);
-            motorBL.setPower(Math.atan(1.12*(driverLeftY - driverLeftX + driverRightX)) / speedDiv);
-            motorBR.setPower(Math.atan(1.12*(driverLeftY + driverLeftX - driverRightX)) / speedDiv);
-
-            verticalSlideTo(verticalSlide, vertTarget);
+            motorFL.setPower((Math.atan(1.12*(driverLeftY + driverLeftX + driverRightX)) / speedDiv) * MoveMulti);
+            motorFR.setPower((Math.atan(1.12*(driverLeftY - driverLeftX - driverRightX)) / speedDiv) * MoveMulti);
+            motorBL.setPower((Math.atan(1.12*(driverLeftY - driverLeftX + driverRightX)) / speedDiv) * MoveMulti);
+            motorBR.setPower((Math.atan(1.12*(driverLeftY + driverLeftX - driverRightX)) / speedDiv) * MoveMulti);
 
             //horizontal slide controls?
             if (gunnerLeftY != 0) {
                 horizontalIsManual = true;
-                horizontalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            } else if (gunnerLB) {
-                horizontalTarget = 500;
-                horizontalIsManual = false;
+                //horizontalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             }
 
-            if (horizontalIsManual) {
+            if (gamepad1.aWasPressed()) {
+                MoveMulti *= -1;
+            }
+
+            if (gunnerRightY != 0 && !transfer.isBusy() && !place.isBusy()) {
+                vertTarget -= (int) (gunnerRightY * 25);
+            }
+
+            if (horizontalIsManual && !transfer.isBusy() && !place.isBusy()) {
                 horizontalSlide.setPower(-gunnerLeftY);
-            }
-
-            if(!horizontalIsManual) {
-                horizontalSlideTo(horizontalSlide, horizontalTarget);
             }
 
             if (gunnerRightTrigger > 0) {
@@ -204,12 +209,16 @@ public class FirstJavaTeleOp extends LinearOpMode {
 
             if (horizontalSlide.getCurrentPosition() <= 100) {
                 inStop.setPosition(0.37);
+                inRotation.setPosition(0.29);
+                IntakeUp = true;
             } else {
                 inStop.setPosition(0.86);
             }
 
             if (gamepad2.aWasPressed() && !transfer.isBusy()) {
                 transfer.start(outPosition);
+                Open = false;
+                vertTarget = 1950;
             }
             if (gamepad2.xWasPressed() && !place.isBusy()) {
                 place.start();
@@ -225,20 +234,22 @@ public class FirstJavaTeleOp extends LinearOpMode {
             }
 
             if (gamepad2.rightBumperWasPressed()) {
-                if (!Open) {
+                if (Open) {
                     outClaw.setPosition(0.26);
-                    Open = true;
+                    Open = false;
                 } else {
                     outClaw.setPosition(0.15);
-                    Open = false;
+                    Open = true;
                 }
             }
 
             if (gamepad2.bWasPressed()) {
                 if (currentSide == 0.29) {
+                    outSwivel.setPosition(0.17);
                     currentSide = 0.58;
                     outPosition = 0.58;
                 } else {
+                    outSwivel.setPosition(0.85);
                     currentSide = 0.29;
                     outPosition = 0.29;
                 }
@@ -249,7 +260,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
             }
 
             if (gamepad2.dpadUpWasPressed()) {
-                vertTarget = 1600;
+                vertTarget = 1950;
                 outPosition = currentSide;
             }
 
@@ -260,6 +271,7 @@ public class FirstJavaTeleOp extends LinearOpMode {
 
             if (!transfer.isBusy() && !place.isBusy()) {
                 outRotation.setPosition(outPosition);
+                verticalSlideTo(verticalSlide, vertTarget);
             }
 
             if (gamepad2.dpadLeftWasPressed()) {
@@ -279,6 +291,8 @@ public class FirstJavaTeleOp extends LinearOpMode {
             telemetry.addLine("Running");
             telemetry.addData("Transfer State", transfer.returnState());
             telemetry.addData("vertical encoder: ", verticalSlide.getCurrentPosition());
+            telemetry.addData("vertical target: ", verticalSlide.getTargetPosition());
+            telemetry.addData("vertical mode: ", verticalSlide.getMode());
             telemetry.addData("outPosition: ", outPosition);
             telemetry.addData("horizontal encoder: ", horizontalSlide.getCurrentPosition());
             telemetry.addData("horizontal manual mode: ", horizontalIsManual);

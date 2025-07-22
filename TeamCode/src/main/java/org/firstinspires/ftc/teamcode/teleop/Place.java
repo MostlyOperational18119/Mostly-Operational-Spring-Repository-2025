@@ -21,6 +21,7 @@ public class Place {
     private long stateStartTime;
 
     private final Servo outClaw;
+    private final Servo outRotation;
     private final DcMotorEx verticalSlide;
     private final Telemetry telemetry;
     private boolean hasReset = false;
@@ -28,6 +29,7 @@ public class Place {
     public Place(HardwareMap hardwareMap, Telemetry telemetry) {
         this.telemetry = telemetry;
         outClaw = hardwareMap.get(Servo.class, "OutClaw");
+        outRotation = hardwareMap.get(Servo.class, "OutRotation");
         verticalSlide = hardwareMap.get(DcMotorEx.class, "verticalSlide");
         verticalSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         verticalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -45,7 +47,8 @@ public class Place {
 
         switch (currentState) {
             case SLIDE_DOWN:
-                verticalSlide.setTargetPosition(450);
+                verticalSlide.setTargetPosition(800);
+                outRotation.setPosition(0.0);
                 verticalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 verticalSlide.setPower(0.5);
                 if (elapsed > 300) {
@@ -58,10 +61,10 @@ public class Place {
                     outClaw.setPosition(0.15);
                 }
                 hasReset = false;
+                verticalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
                 currentState = State.DONE;
                 break;
             case DONE:
-                verticalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
                 break;
         }
     }
