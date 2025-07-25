@@ -122,7 +122,7 @@ public class Basket5Blue extends LinearOpMode {
         inRotation.setPosition(0.25); // Rotate back to slide sample to claw :D
         inStop.setPosition(0.37);
         outRotation.setPosition(0.97); // Point claw down
-        outSwivel.setPosition(0.17);
+        outSwivel.setPosition(0.85);
         outClaw.setPosition(0.15); // Open
 
         sleep(200);

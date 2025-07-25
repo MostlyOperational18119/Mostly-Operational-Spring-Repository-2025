@@ -137,6 +137,8 @@ public class FirstJavaTeleOp extends LinearOpMode {
         double speedDiv = 1.0;
         double currentSide = 0.29;
         double outPosition = 0.96;
+        boolean isHigh = false;
+        double outPositionHigh = 0.12;
         double MoveMulti = 1;
         long startTime = 0;
         int vertTarget = 0;
@@ -247,21 +249,34 @@ public class FirstJavaTeleOp extends LinearOpMode {
                 if (currentSide == 0.29) {
                     outSwivel.setPosition(0.17);
                     currentSide = 0.58;
-                    outPosition = 0.58;
+                    outPositionHigh = 0.75;
+                    if (isHigh) {
+                        outPosition = currentSide;
+                    } else {
+                        outPosition = outPositionHigh;
+                    }
                 } else {
                     outSwivel.setPosition(0.85);
                     currentSide = 0.29;
-                    outPosition = 0.29;
+                    outPositionHigh = 0.12;
+                    if (isHigh) {
+                        outPosition = currentSide;
+                    } else {
+                        outPosition = outPositionHigh;
+                    }
                 }
             }
             if (gamepad2.dpadDownWasPressed()) {
                 vertTarget = 0;
                 outPosition = 0.16;
+                outSwivel.setPosition(0.85);
+                isHigh = false;
             }
 
             if (gamepad2.dpadUpWasPressed()) {
                 vertTarget = 1950;
                 outPosition = currentSide;
+                isHigh = true;
             }
 
             if(gamepad2.leftStickButtonWasPressed()) {
@@ -276,7 +291,8 @@ public class FirstJavaTeleOp extends LinearOpMode {
 
             if (gamepad2.dpadLeftWasPressed()) {
                 vertTarget = 1200;
-                outPosition = 0.12;
+                outPosition = outPositionHigh;
+                isHigh = false;
             }
 
             driverPrevious.copy(driverCurrent);
