@@ -136,7 +136,7 @@ public class AutoTransfer {
                 break;
             case CLOSE_OUT_CLAW:
                     outClaw.setPosition(0.26);
-                if (elapsed > 1000) {
+                if (elapsed > 650) {
                     currentState = State.LIFT_VERT_SLIDE;
                     stateStartTime = System.currentTimeMillis();
                     intakeMotor.setPower(0);

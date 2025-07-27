@@ -79,7 +79,7 @@ public class BarAuto extends LinearOpMode {
         outRotation.setPosition(0.2); // Point towards the basket
         verticalSlideTo(500); // Up
         outRotation.setPosition(0.04);
-        verticalSlideTo(1300);
+        verticalSlideTo(1500);
     }
 
     private void hangPart1() {

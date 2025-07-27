@@ -25,6 +25,7 @@ public class Place {
     private final DcMotorEx verticalSlide;
     private final Telemetry telemetry;
     private boolean hasReset = false;
+    private boolean isFront = false;
 
     public Place(HardwareMap hardwareMap, Telemetry telemetry) {
         this.telemetry = telemetry;
@@ -35,9 +36,10 @@ public class Place {
         verticalSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
-    public void start() {
+    public void start(boolean isFrontPass) {
         if (currentState == State.DONE) {
             currentState = State.SLIDE_DOWN;
+            isFront = isFrontPass;
             stateStartTime = System.currentTimeMillis();
         }
     }
@@ -48,7 +50,11 @@ public class Place {
         switch (currentState) {
             case SLIDE_DOWN:
                 verticalSlide.setTargetPosition(800);
-                outRotation.setPosition(0.0);
+                if (!isFront) {
+                    outRotation.setPosition(0.0);
+                } else {
+                    outRotation.setPosition(1.0);
+                }
                 verticalSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 verticalSlide.setPower(0.5);
                 if (elapsed > 300) {

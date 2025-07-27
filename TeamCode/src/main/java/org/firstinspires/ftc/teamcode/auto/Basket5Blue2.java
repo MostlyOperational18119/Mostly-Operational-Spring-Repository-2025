@@ -15,8 +15,8 @@ import org.firstinspires.ftc.teamcode.pedro.FConstants;
 import org.firstinspires.ftc.teamcode.pedro.LConstants;
 
 @SuppressWarnings("unused")
-@Autonomous(name = "Basket Auto")
-public class Basket5Blue extends LinearOpMode {
+@Autonomous(name = "Basket Auto2")
+public class Basket5Blue2 extends LinearOpMode {
     DcMotor verticalSlide;
     DcMotor horizontalSlide;
     Servo outClaw;
@@ -31,9 +31,9 @@ public class Basket5Blue extends LinearOpMode {
     Pose placeSample = new Pose(11.5, 130, Math.toRadians(-48)); // 12,128
     Pose placeSample2 = new Pose(12, 131, Math.toRadians(-48));
     Pose pickupSample1 = new Pose(22, 122.5, Math.toRadians(0));
-    Pose shimmySample1 = new Pose(22, 123.5, Math.toRadians(8));
+    Pose shimmySample1 = new Pose(22, 125.5, Math.toRadians(5));
     Pose pickupSample2 = new Pose(22, 130.5, Math.toRadians(0));
-    Pose shimmySample2 = new Pose(22, 131.5, Math.toRadians(12));
+    Pose shimmySample2 = new Pose(22, 134.5, Math.toRadians(9));
 
     boolean actionStarted = false;
 //    Pose pickupSample4 = new Pose(28, 121.5, Math.toRadians(180));
