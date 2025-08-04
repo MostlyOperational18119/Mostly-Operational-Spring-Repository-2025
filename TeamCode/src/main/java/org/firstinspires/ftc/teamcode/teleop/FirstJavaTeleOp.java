@@ -177,10 +177,17 @@ public class FirstJavaTeleOp extends LinearOpMode {
                 telemetry.addLine("Warning: LimeLight output is null");
             }
 
-            motorFL.setPower((Math.atan(1.12*(driverLeftY + driverLeftX + driverRightX)) / speedDiv));
-            motorFR.setPower((Math.atan(1.12*(driverLeftY - driverLeftX - driverRightX)) / speedDiv));
-            motorBL.setPower((Math.atan(1.12*(driverLeftY - driverLeftX + driverRightX)) / speedDiv));
-            motorBR.setPower((Math.atan(1.12*(driverLeftY + driverLeftX - driverRightX)) / speedDiv));
+            if (gamepad1.right_trigger >= 0.5) {
+                motorFL.setPower((Math.atan(1.12*(driverLeftY + driverLeftX + driverRightX)) / speedDiv) * 0.5);
+                motorFR.setPower((Math.atan(1.12*(driverLeftY - driverLeftX - driverRightX)) / speedDiv) * 0.5);
+                motorBL.setPower((Math.atan(1.12*(driverLeftY - driverLeftX + driverRightX)) / speedDiv) * 0.5);
+                motorBR.setPower((Math.atan(1.12*(driverLeftY + driverLeftX - driverRightX)) / speedDiv) * 0.5);
+            } else {
+                motorFL.setPower((Math.atan(1.12*(driverLeftY + driverLeftX + driverRightX)) / speedDiv));
+                motorFR.setPower((Math.atan(1.12*(driverLeftY - driverLeftX - driverRightX)) / speedDiv));
+                motorBL.setPower((Math.atan(1.12*(driverLeftY - driverLeftX + driverRightX)) / speedDiv));
+                motorBR.setPower((Math.atan(1.12*(driverLeftY + driverLeftX - driverRightX)) / speedDiv));
+            }
 
             //horizontal slide controls?
             if (gunnerLeftY != 0) {

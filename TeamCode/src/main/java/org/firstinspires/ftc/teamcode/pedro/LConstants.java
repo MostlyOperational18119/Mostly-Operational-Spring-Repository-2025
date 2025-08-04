@@ -5,18 +5,18 @@ import com.pedropathing.localization.constants.PinpointConstants;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
-public class LConstants {
+public class   LConstants {
     static {
-        PinpointConstants.forwardY = -6.7;
-        PinpointConstants.strafeX = 0.0;
-        PinpointConstants.distanceUnit = DistanceUnit.INCH; // Disgusting
+        PinpointConstants.forwardY = -4.25;
+        PinpointConstants.strafeX = -3.75;
+        PinpointConstants.distanceUnit = DistanceUnit.INCH;
         PinpointConstants.hardwareMapName = "pinpoint";
         PinpointConstants.useYawScalar = false;
         PinpointConstants.yawScalar = 1.0;
         PinpointConstants.useCustomEncoderResolution = false;
         PinpointConstants.encoderResolution = GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD;
-        PinpointConstants.customEncoderResolution = 19.894367;
-        PinpointConstants.forwardEncoderDirection = GoBildaPinpointDriver.EncoderDirection.FORWARD;
-        PinpointConstants.strafeEncoderDirection = GoBildaPinpointDriver.EncoderDirection.FORWARD;
+        PinpointConstants.customEncoderResolution = 13.26291192;
+        PinpointConstants.forwardEncoderDirection = GoBildaPinpointDriver.EncoderDirection.REVERSED;
+        PinpointConstants.strafeEncoderDirection = GoBildaPinpointDriver.EncoderDirection.REVERSED;
     }
 }
