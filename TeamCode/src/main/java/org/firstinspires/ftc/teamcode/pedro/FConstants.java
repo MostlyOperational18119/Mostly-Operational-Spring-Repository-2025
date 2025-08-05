@@ -11,7 +11,7 @@ public class FConstants {
         FollowerConstants.localizers = Localizers.PINPOINT;
 
         // We can change the value of any variable/constant of FollowerConstants.
-        FollowerConstants.mass = 14.515; // In kg
+        FollowerConstants.mass = 5.987419; // In kg
 
         FollowerConstants.leftFrontMotorName = "motorFL";
         FollowerConstants.leftRearMotorName = "motorBL";
@@ -24,12 +24,14 @@ public class FConstants {
         FollowerConstants.rightRearMotorDirection = DcMotorSimple.Direction.FORWARD;
 
         // Tuning D:
-        FollowerConstants.xMovement = 67.8989;
-        FollowerConstants.yMovement = 47.0148;
+        FollowerConstants.xMovement = 62.321;
+        FollowerConstants.yMovement = 52.6343;
 
-        FollowerConstants.forwardZeroPowerAcceleration = -33.49;
-        FollowerConstants.lateralZeroPowerAcceleration = -74.9233;
+        FollowerConstants.forwardZeroPowerAcceleration = -35.1168;
+        FollowerConstants.lateralZeroPowerAcceleration = -46.3753;
 
+        FollowerConstants.headingPIDFCoefficients.setCoefficients(0.5,0.00001,0.01,0);
+        FollowerConstants.translationalPIDFCoefficients.setCoefficients(0.1,0.00001,0.01,0.02);
         FollowerConstants.drivePIDFCoefficients = new CustomFilteredPIDFCoefficients(0.012, 0.0, 0.0001, 0.6, 0.0);
     }
 }
