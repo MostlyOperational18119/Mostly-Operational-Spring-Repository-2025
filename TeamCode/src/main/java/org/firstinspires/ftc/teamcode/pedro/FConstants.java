@@ -33,5 +33,6 @@ public class FConstants {
         FollowerConstants.headingPIDFCoefficients.setCoefficients(0.5,0.00001,0.01,0);
         FollowerConstants.translationalPIDFCoefficients.setCoefficients(0.1,0.00001,0.01,0.02);
         FollowerConstants.drivePIDFCoefficients = new CustomFilteredPIDFCoefficients(0.012, 0.0, 0.0001, 0.6, 0.0);
+        FollowerConstants.centripetalScaling = 0.0015;
     }
 }
