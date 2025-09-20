@@ -19,7 +19,7 @@ public class AprilTagAuto extends LinearOpMode {
 
     private VisionPortal visionPortal;
     private AprilTagProcessor apriltag;
-    private int AprilTagId;
+    private int AprilTagId  = -1;
     @Override
 
     public void runOpMode() {
@@ -36,10 +36,19 @@ public class AprilTagAuto extends LinearOpMode {
         builder.addProcessor(apriltag);
         visionPortal = builder.build();
 
-        List<AprilTagDetection> currentDetections = apriltag.getDetections();
-        for (AprilTagDetection detection : currentDetections ) {
-            AprilTagId = detection.id;
-            telemetry.addData("ID: ", detection.id);
+        while (AprilTagId == -1 && !isStarted() && !isStopRequested()) {
+            List<AprilTagDetection> currentDetections = apriltag.getDetections();
+            for (AprilTagDetection detection : currentDetections ) {
+                AprilTagId = detection.id;
+                telemetry.addData("ID: ", detection.id);
+            }
+
+            if (AprilTagId == -1) {
+                telemetry.addData("AprilTag", "No tags detected");
+            }
+
+            telemetry.update();
+            sleep(20);
         }
 
         waitForStart();
@@ -50,8 +59,4 @@ public class AprilTagAuto extends LinearOpMode {
 
 
     }
-
-
-
-
 }
